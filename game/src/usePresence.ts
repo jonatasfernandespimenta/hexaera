@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react'
 
-const ID = crypto.randomUUID() // uma por aba; some ao fechar
+// Um id por aba, mantido entre recarregamentos (trocar idioma, F5) para não contar a mesma aba duas vezes.
+const ID = (() => {
+  try {
+    const id = sessionStorage.getItem('hexaera.presence') ?? crypto.randomUUID()
+    sessionStorage.setItem('hexaera.presence', id)
+    return id
+  } catch { return crypto.randomUUID() } // sem storage: volta a contar recarregamentos
+})()
 const EVERY = 30_000
 
 // Avisa o servidor que esta aba está jogando e devolve quantas abas estão ativas no total.
