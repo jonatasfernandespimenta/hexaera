@@ -76,3 +76,11 @@ test('versus: votos são ignorados (última era não trava o fechamento)', () =>
   expect(closed.era).toBe(ERAS.length - 1)
   expect(closed.over).toBeNull()
 })
+
+test('coop: voto dos dois na última era vence a partida sem lançar', () => {
+  const last = (seat: 0 | 1) => ({ ...newMatchGame(5, 'coop', seat, false), era: ERAS.length - 1 })
+  const a = closeTurn(last(0), rival({ votes: [1] }), true)
+  const b = closeTurn(last(1), rival({ votes: [1], state: a }), true)
+  expect([a.over, b.over]).toEqual(['won', 'won'])
+  expect(a.turn).toBe(1) // vitória encerra sem rodar o endTurn
+})

@@ -26,7 +26,8 @@ export function useOnline(id: string | null) {
   const [sendingNow, setSending] = useState(false) // "Fim do turno" em andamento: UI trava os controles
 
   // Espelho para as funções assíncronas (evita closures velhas).
-  const cur = useRef({ creds: null as Creds | null, coop: false, local: null as State | null, outbox: [] as Convoy[], vote: false })
+  // done: partida encerrada e o servidor já tem o estado final (para de consultar).
+  const cur = useRef({ creds: null as Creds | null, coop: false, local: null as State | null, outbox: [] as Convoy[], vote: false, done: false })
   const chain = useRef<Promise<void>>(Promise.resolve())
   const busy = useRef(0)
   const phaseRef = useRef<OnlinePhase>('loading')
@@ -62,7 +63,10 @@ export function useOnline(id: string | null) {
     }
     put(local)
     setPhase(p)
-    if (save) await putState(id, creds.token, local)
+    // Reenvia se o servidor ficou para trás (ex.: um putState falhou depois de fechar o turno ou encerrar).
+    const srv = v.me.state
+    if (save || local.turn > (srv?.turn ?? 0) || (local.over ?? null) !== (srv?.over ?? null)) await putState(id, creds.token, local)
+    cur.current.done = !!local.over
   }, [id, put])
 
   const refresh = useCallback(async () => {
@@ -76,7 +80,7 @@ export function useOnline(id: string | null) {
   useEffect(() => {
     let alive = true
     const creds = id ? getCreds(id) : null
-    cur.current = { creds, coop: false, local: null, outbox: [], vote: false }
+    cur.current = { creds, coop: false, local: null, outbox: [], vote: false, done: false }
     setPhase('loading'); setError(null); setOutbox([]); setVote(false)
     setMeta(null); setSeat(null); setRival(null); setLocal(null); setSent([])
     if (!id) return
@@ -90,12 +94,12 @@ export function useOnline(id: string | null) {
     return () => { alive = false }
   }, [id, run, apply])
 
-  // Consulta periódica: rápida na sala e esperando; lenta jogando (status do rival).
+  // Consulta periódica: rápida na sala e esperando; lenta jogando (status do rival). Para com a partida encerrada e salva.
   useEffect(() => {
     const ms = phase === 'lobby' || phase === 'waiting' ? 1500 : phase === 'playing' ? 5000 : 0
     if (!ms) return
     const t = setInterval(() => {
-      if (busy.current) return // escrita (ou consulta) em andamento: pula a vez
+      if (busy.current || cur.current.done) return // escrita (ou consulta) em andamento: pula a vez
       run(refresh).catch(e => setError(msg(e)))
     }, ms)
     return () => clearInterval(t)
