@@ -7,7 +7,7 @@ tags: [regras, energia]
 
 ## Regras
 - Usinas geram ⚡ por turno para **a rede elétrica** (separada da rede de transporte).
-- Construções industriais/modernas **exigem ⚡** para funcionar. Falta → param.
+- Construções industriais/modernas **exigem ⚡** para funcionar. Falta → **processadores param**; **produtores puros** (Fazenda mecanizada, Estufa, Fazenda vertical) **rendem metade** ✅ — senão um apagão vira fome geral ([[Playtest]] rodada 8).
 - ⚡ **não acumula** sem Baterias (Contemporânea).
 
 ## Fontes por era

@@ -1,6 +1,7 @@
 import { useFrame } from '@react-three/fiber'
 import { useMemo, useRef } from 'react'
 import { CanvasTexture, NearestFilter, RepeatWrapping, SRGBColorSpace, type PointLight } from 'three'
+import { Vox } from './voxbox'
 
 // Mesa de madeira + props decorativos (ver vault: Direção Visual → Mesa e ambiente).
 // ponytail: props em posições fixas; o mapa infinito pode crescer por cima deles — afastar/ocultar quando incomodar.
@@ -64,9 +65,9 @@ function Die({ p, rot, faces }: { p: [number, number, number]; rot: [number, num
 function Meeple({ p, c, ry = 0, lying = false }: { p: [number, number, number]; c: string; ry?: number; lying?: boolean }) {
   return (
     <group position={p} rotation={[lying ? Math.PI / 2 : 0, ry, 0]}>
-      <mesh position={[0, 0.12, 0]} castShadow><boxGeometry args={[0.22, 0.24, 0.1]} /><meshStandardMaterial color={c} /></mesh>
-      <mesh position={[0, 0.3, 0]} castShadow><boxGeometry args={[0.12, 0.12, 0.1]} /><meshStandardMaterial color={c} /></mesh>
-      <mesh position={[0, 0.2, 0]} castShadow><boxGeometry args={[0.36, 0.08, 0.1]} /><meshStandardMaterial color={c} /></mesh>
+      <Vox p={[0, 0.12, 0]} s={[0.22, 0.24, 0.1]} c={c} />
+      <Vox p={[0, 0.3, 0]} s={[0.12, 0.12, 0.1]} c={c} />
+      <Vox p={[0, 0.2, 0]} s={[0.36, 0.08, 0.1]} c={c} />
     </group>
   )
 }
@@ -90,9 +91,10 @@ function Lantern() {
   })
   return (
     <group position={[-11, 0, -7]}>
-      <mesh position={[0, 0.1, 0]} castShadow><boxGeometry args={[0.9, 0.2, 0.9]} /><meshStandardMaterial color="#3a2a1a" /></mesh>
-      <mesh position={[0, 0.8, 0]}><boxGeometry args={[0.6, 1.1, 0.6]} /><meshStandardMaterial color="#ffcf7a" emissive="#ff9a2a" emissiveIntensity={2} /></mesh>
-      <mesh position={[0, 1.45, 0]}><boxGeometry args={[0.9, 0.18, 0.9]} /><meshStandardMaterial color="#3a2a1a" /></mesh>
+      <Vox p={[0, 0.1, 0]} s={[0.9, 0.2, 0.9]} c="#3a2a1a" />
+      <Vox p={[0, 0.8, 0]} s={[0.6, 1.1, 0.6]} c="#ffcf7a" e="#ff9a2a" />
+      <Vox p={[0, 1.45, 0]} s={[0.9, 0.18, 0.9]} c="#3a2a1a" />
+      {[[-0.38, -0.38], [0.38, -0.38], [-0.38, 0.38], [0.38, 0.38]].map(([x, z]) => <Vox key={`${x}${z}`} p={[x, 0.8, z]} s={[0.1, 1.1, 0.1]} c="#2a1e12" />)}
       <pointLight ref={light} position={[0, 1.2, 0]} color="#ffae5a" distance={22} decay={1.4} />
     </group>
   )
@@ -111,7 +113,7 @@ export function Table() {
 
       {/* bandeja com meeples azuis */}
       <group position={[-9.5, 0, 5.5]} rotation={[0, 0.3, 0]}>
-        <mesh position={[0, 0.1, 0]} castShadow receiveShadow><boxGeometry args={[2, 0.2, 1.5]} /><meshStandardMaterial color="#4a2c16" /></mesh>
+        <Vox p={[0, 0.1, 0]} s={[2, 0.2, 1.5]} c="#4a2c16" />
         {blues.map((p, i) => <Meeple key={i} p={[p[0], 0.2, p[2]]} c="#2a5ad8" ry={i * 0.4} />)}
       </group>
       <Meeple p={[-8.5, 0, 2.5]} c="#c8302a" ry={0.6} />

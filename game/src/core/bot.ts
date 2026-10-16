@@ -170,7 +170,7 @@ export function step(s: State): State | null {
     () => (happiness(s) < 45 ? tryBuild(s, avail(s).filter(id => (BUILDINGS[id].happy ?? 0) > 0).sort(newest)) : null),
     // Matéria-prima básica para continuar construindo.
     () => {
-      for (const res of ['wood', 'stone', 'clay', 'iron', 'tools', 'steel', 'electronics'] as Res[])
+      for (const res of ['wood', 'stone', 'clay', 'iron', 'tools', 'coal', 'oil', 'steel', 'electronics'] as Res[])
         if (producers(s, res).length && need(res, 15)) {
           const t = supply(res)
           if (t) return t

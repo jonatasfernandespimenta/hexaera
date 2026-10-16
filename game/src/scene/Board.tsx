@@ -1,5 +1,5 @@
 import { Html, OrbitControls } from '@react-three/drei'
-import { useFrame, type ThreeEvent } from '@react-three/fiber'
+import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Color, Object3D, ShaderMaterial, type Group, type MeshStandardMaterial, type InstancedMesh, type PointLight } from 'three'
 import { BUILDINGS, HUNT_COST, LINKS, RES, THREATS, TERRAINS, type BuildingId, type Link, type Res } from '../core/data'
@@ -8,6 +8,7 @@ import { terrainAt, linked, offGrid, canLink, canPlace, centerMax, edgeKey, expl
 import { distance, key, neighbors, parse, toWorld, type Hex } from '../core/hex'
 import { Table } from './Table'
 import { Vox as V, windTime } from './vox'
+import { boxGeo, Shape, Vox, voxMat } from './voxbox'
 
 const H = 0.4 // espessura da peça
 const R = 0.97 // raio (deixa uma fresta fina entre as peças)
@@ -33,14 +34,6 @@ function rng(k: string) {
 const liftOf = (k: string, terrain: string) => LIFT[terrain] + (terrain === 'river' ? 0 : rng(k)() * 0.06)
 
 type V3 = [number, number, number]
-function Vox({ p, s, c, e }: { p: V3; s: V3; c: string; e?: string }) {
-  return (
-    <mesh position={p} castShadow receiveShadow>
-      <boxGeometry args={s} />
-      <meshStandardMaterial color={c} emissive={e ?? '#000'} emissiveIntensity={e ? 1.5 : 0} flatShading />
-    </mesh>
-  )
-}
 
 // Vegetação do pack (MagicaVoxel). k ∈ [0,1) escolhe variante, escala e giro.
 function Tree({ x, z, k }: { x: number; z: number; k: number }) {
@@ -249,12 +242,8 @@ function Campfire({ hp, max }: { hp: number; max: number }) {
   )
 }
 
-const Log = ({ p, rz = 0, l = 0.26 }: { p: V3; rz?: number; l?: number }) => (
-  <mesh position={p} rotation={[0, 0, rz]} castShadow>
-    <cylinderGeometry args={[0.04, 0.04, l, 6]} />
-    <meshStandardMaterial color="#9a6a3a" flatShading />
-  </mesh>
-)
+const Log = ({ p, rz = 0, l = 0.26 }: { p: V3; rz?: number; l?: number }) =>
+  <Shape kind="cyl" p={p} rot={[0, 0, rz]} r0={0.045} h={l} c="#9a6a3a" st={0.02} />
 
 // ---------- peças animadas da Moderna/Contemporânea ----------
 // Cavalo-de-pau do poço de petróleo: balança sem parar.
@@ -401,10 +390,7 @@ function Model({ id }: { id: BuildingId }) {
       return (
         <>
           <V name="Decoration - Bookshelf - Scroll - Variant1" p={[-0.3, 0, 0.3]} s={1} />
-          <mesh position={[0, 0.2, 0]} castShadow>
-            <coneGeometry args={[0.3, 0.4, 6]} />
-            <meshStandardMaterial color="#d8c7a0" flatShading />
-          </mesh>
+          <Shape kind="cone" p={[0, 0.2, 0]} r={0.3} h={0.4} c="#d8c7a0" />
           <Vox p={[0.32, 0.25, 0]} s={[0.03, 0.5, 0.03]} c="#5b3a1e" />
           <Vox p={[0.39, 0.42, 0]} s={[0.12, 0.14, 0.02]} c="#6a3fa0" />
         </>
@@ -418,10 +404,7 @@ function Model({ id }: { id: BuildingId }) {
             <Vox key={`${x}${z}`} p={[x, 0.25, z]} s={[0.04, 0.5, 0.04]} c="#6b4526" />
           ))}
           <Vox p={[0, 0.5, 0]} s={[0.3, 0.05, 0.3]} c="#8b6a40" />
-          <mesh position={[0, 0.65, 0]} rotation={[0, Math.PI / 4, 0]} castShadow>
-            <coneGeometry args={[0.26, 0.2, 4]} />
-            <meshStandardMaterial color="#7a3a22" flatShading />
-          </mesh>
+          <Shape kind="cone" square p={[0, 0.65, 0]} r={0.2} h={0.2} c="#7a3a22" st={0.025} />
         </>
       )
     case 'house':
@@ -468,7 +451,7 @@ function Model({ id }: { id: BuildingId }) {
         <>
           {[-0.4, -0.2, 0, 0.2, 0.4].flatMap(z => [-0.35, -0.15, 0.05, 0.25].map(x =>
             <V key={`${x}${z}`} name="Vegetation - Crop - Wheat - Variant4" p={[x, 0, z * 0.8]} s={0.6} sway="grass" />))}
-          <mesh position={[0.36, 0.25, -0.28]} castShadow><cylinderGeometry args={[0.1, 0.1, 0.5, 8]} /><meshStandardMaterial color="#b8b8b0" flatShading /></mesh>
+          <Shape kind="cyl" p={[0.36, 0.25, -0.28]} r0={0.1} h={0.5} c="#b8b8b0" />
           <Wander at={[0.1, 0.05]} r={0.25} speed={0.25} seed={2} face={Math.PI / 2}>
             <Vox p={[0, 0.06, 0]} s={[0.14, 0.08, 0.09]} c="#d8402c" />
             <Vox p={[-0.03, 0.13, 0]} s={[0.06, 0.06, 0.08]} c="#9fd0f0" />
@@ -624,10 +607,7 @@ function Model({ id }: { id: BuildingId }) {
           <V name="Crafting - Work - Sharpening Wheel - Frame" p={[-0.32, 0, 0.32]} s={0.6} />
           <Vox p={[0, 0.13, 0]} s={[0.42, 0.26, 0.32]} c="#a0825a" />
           <Vox p={[0, 0.3, 0]} s={[0.46, 0.06, 0.36]} c="#5b3a1e" />
-          <mesh position={[0.28, 0.22, 0.12]} rotation={[0, 0, Math.PI / 2]} castShadow>
-            <cylinderGeometry args={[0.12, 0.12, 0.04, 8]} />
-            <meshStandardMaterial color="#6a6a64" flatShading />
-          </mesh>
+          <Shape kind="cyl" p={[0.28, 0.22, 0.12]} rot={[0, 0, Math.PI / 2]} r0={0.12} h={0.04} c="#6a6a64" st={0.02} />
           <Vox p={[-0.25, 0.04, 0.24]} s={[0.12, 0.06, 0.1]} c="#7a7a80" />
         </>
       )
@@ -646,10 +626,7 @@ function Model({ id }: { id: BuildingId }) {
       return (
         <>
           <Vox p={[0, 0.2, 0]} s={[0.28, 0.4, 0.28]} c="#e0d4b8" />
-          <mesh position={[0, 0.48, 0]} rotation={[0, Math.PI / 4, 0]} castShadow>
-            <coneGeometry args={[0.24, 0.18, 4]} />
-            <meshStandardMaterial color="#8a3a22" flatShading />
-          </mesh>
+          <Shape kind="cone" square p={[0, 0.48, 0]} r={0.18} h={0.18} c="#8a3a22" st={0.025} />
           {[0, 1, 2, 3].map(i => (
             <group key={i} position={[0, 0.36, 0.16]} rotation={[0, 0, (i * Math.PI) / 4]}>
               <Vox p={[0, 0, 0]} s={[0.05, 0.56, 0.01]} c="#7a5530" />
@@ -686,10 +663,7 @@ function Model({ id }: { id: BuildingId }) {
           <Vox p={[0, 0.22, 0.05]} s={[0.3, 0.44, 0.6]} c="#d8d4c8" />
           <Vox p={[0, 0.5, 0.05]} s={[0.22, 0.12, 0.56]} c="#7a3a5a" />
           <Vox p={[0, 0.4, -0.3]} s={[0.22, 0.8, 0.2]} c="#e0dcd0" />
-          <mesh position={[0, 0.92, -0.3]} rotation={[0, Math.PI / 4, 0]} castShadow>
-            <coneGeometry args={[0.16, 0.3, 4]} />
-            <meshStandardMaterial color="#7a3a5a" flatShading />
-          </mesh>
+          <Shape kind="cone" square p={[0, 0.92, -0.3]} r={0.12} h={0.3} c="#7a3a5a" st={0.025} />
           <Vox p={[0, 0.5, -0.19]} s={[0.1, 0.1, 0.01]} c="#ffcf6a" e="#ff9a2a" />
           <Vox p={[0, 0.1, 0.351]} s={[0.1, 0.2, 0.01]} c="#3a2412" />
         </>
@@ -729,10 +703,7 @@ function Model({ id }: { id: BuildingId }) {
         <>
           <Vox p={[0, 0.14, 0.02]} s={[0.62, 0.28, 0.44]} c="#a8553a" />
           {[-0.22, 0, 0.22].map(x => (
-            <mesh key={x} position={[x, 0.33, 0.02]} rotation={[Math.PI / 2, 0, Math.PI / 2]} castShadow>
-              <cylinderGeometry args={[0.13, 0.13, 0.46, 3, 1, false, 0, Math.PI]} />
-              <meshStandardMaterial color="#5a5a5e" flatShading />
-            </mesh>
+            <Shape key={x} kind="vault" p={[x, 0.28, 0.02]} rot={[0, Math.PI / 2, 0]} r={0.11} len={0.44} c="#5a5a5e" st={0.025} />
           ))}
           {[-0.2, 0, 0.2].map(x => <Vox key={x} p={[x, 0.14, 0.241]} s={[0.1, 0.1, 0.01]} c="#ffd98a" e="#a06a1a" />)}
           <Vox p={[-0.34, 0.45, -0.22]} s={[0.1, 0.9, 0.1]} c="#7a3a2a" />
@@ -778,7 +749,7 @@ function Model({ id }: { id: BuildingId }) {
           <Vox p={[-0.12, 0.34, 0.08]} s={[0.5, 0.04, 0.44]} c="#4a4a4e" />
           {[[0.26, -0.2], [0.26, 0.18]].map(([x, z], i) => (
             <group key={i}>
-              <mesh position={[x, 0.3, z]} castShadow><cylinderGeometry args={[0.1, 0.14, 0.6, 8]} /><meshStandardMaterial color="#c8c8c0" flatShading /></mesh>
+              <Shape kind="cyl" p={[x, 0.3, z]} r0={0.14} r1={0.1} h={0.6} c="#c8c8c0" />
               <Smoke p={[x, 0.64, z]} />
             </group>
           ))}
@@ -845,8 +816,8 @@ function Model({ id }: { id: BuildingId }) {
     case 'stadium':
       return (
         <>
-          <mesh position={[0, 0.12, 0]} castShadow receiveShadow><cylinderGeometry args={[0.55, 0.6, 0.24, 12, 1, true]} /><meshStandardMaterial color="#b8b8b0" side={2} flatShading /></mesh>
-          <mesh position={[0, 0.02, 0]} receiveShadow><cylinderGeometry args={[0.45, 0.45, 0.04, 12]} /><meshStandardMaterial color="#4fae3a" flatShading /></mesh>
+          <Shape kind="ring" p={[0, 0.12, 0]} ri={0.46} ro={0.6} h={0.24} c="#b8b8b0" st={0.04} />
+          <Shape kind="cyl" p={[0, 0.02, 0]} r0={0.46} h={0.04} c="#4fae3a" st={0.04} />
           {[0, 1, 2, 3].map(i => <Vox key={i} p={[Math.cos(i * 1.57 + 0.78) * 0.55, 0.32, Math.sin(i * 1.57 + 0.78) * 0.55]} s={[0.04, 0.4, 0.04]} c="#5a5a5e" />)}
           {[0, 1, 2, 3].map(i => <Vox key={`l${i}`} p={[Math.cos(i * 1.57 + 0.78) * 0.55, 0.53, Math.sin(i * 1.57 + 0.78) * 0.55]} s={[0.1, 0.05, 0.1]} c="#fff6d0" e="#ffe08a" />)}
         </>
@@ -880,11 +851,11 @@ function Model({ id }: { id: BuildingId }) {
         <>
           {[[-0.2, -0.1], [0.2, -0.15]].map(([x, z], i) => (
             <group key={i}>
-              <mesh position={[x, 0.32, z]} castShadow><cylinderGeometry args={[0.13, 0.19, 0.64, 10]} /><meshStandardMaterial color="#e0e0d8" flatShading /></mesh>
+              <Shape kind="cyl" p={[x, 0.32, z]} r0={0.19} r1={0.13} h={0.64} c="#e0e0d8" />
               <Smoke p={[x, 0.68, z]} />
             </group>
           ))}
-          <mesh position={[0.05, 0.14, 0.26]} castShadow><sphereGeometry args={[0.16, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2]} /><meshStandardMaterial color="#c8c8c0" flatShading /></mesh>
+          <Shape kind="dome" p={[0.05, 0.06, 0.26]} r={0.16} c="#c8c8c0" st={0.025} />
           <Vox p={[0.05, 0.03, 0.26]} s={[0.36, 0.06, 0.36]} c="#8a8a90" />
         </>
       )
@@ -931,7 +902,7 @@ function Model({ id }: { id: BuildingId }) {
           <Vox p={[0, 0.01, 0]} s={[0.12, 0.02, 0.9]} c="#c8c8c0" />
           {[[-0.3, -0.3], [0.3, -0.28], [-0.28, 0.3], [0.32, 0.3]].map(([x, z], i) =>
             <V key={i} name={i % 2 ? 'Vegetation - Tree - Skinny - Green' : 'Vegetation - Tree - Skinny - Light Green'} p={[x, 0, z]} s={0.8} sway="breeze" />)}
-          <mesh position={[0, 0.06, 0]} castShadow><cylinderGeometry args={[0.12, 0.14, 0.1, 8]} /><meshStandardMaterial color="#b8b8b0" flatShading /></mesh>
+          <Shape kind="cyl" p={[0, 0.06, 0]} r0={0.14} r1={0.12} h={0.1} c="#b8b8b0" st={0.02} />
           <Vox p={[0, 0.12, 0]} s={[0.04, 0.12, 0.04]} c="#9fd0f0" e="#3a8ac0" />
         </>
       )
@@ -1062,10 +1033,8 @@ function LinkPiece({ a, b, la, lb, kind }: { a: Hex; b: Hex; la: number; lb: num
   const [ax, az] = toWorld(a), [bx, bz] = toWorld(b)
   const ang = -Math.atan2(bz - az, bx - ax)
   const half = (x: number, z: number, lift: number, dir: number) => (
-    <mesh position={[x + Math.cos(-ang) * 0.5 * dir, H + lift + 0.012, z + Math.sin(-ang) * 0.5 * dir]} rotation={[0, ang, 0]} receiveShadow>
-      <boxGeometry args={[0.62, 0.025, LINK_LOOK[kind].w]} />
-      <meshStandardMaterial color={LINK_LOOK[kind].c} flatShading />
-    </mesh>
+    <mesh position={[x + Math.cos(-ang) * 0.5 * dir, H + lift + 0.012, z + Math.sin(-ang) * 0.5 * dir]} rotation={[0, ang, 0]} receiveShadow
+      geometry={boxGeo([0.62, 0.025, LINK_LOOK[kind].w])} material={voxMat(LINK_LOOK[kind].c)} />
   )
   // Ferrovia: leito de brita + trilhos do pack ao longo da borda.
   const ties = (x: number, z: number, lift: number, dir: number) => [0.3, 0.66].map(d => (
@@ -1074,10 +1043,8 @@ function LinkPiece({ a, b, la, lb, kind }: { a: Hex; b: Hex; la: number; lb: num
   ))
   // Rodovia: asfalto com faixa amarela tracejada no meio.
   const stripe = (x: number, z: number, lift: number, dir: number) => [0.3, 0.62].map(d => (
-    <mesh key={`${dir}${d}`} position={[x + Math.cos(-ang) * d * dir, H + lift + 0.026, z + Math.sin(-ang) * d * dir]} rotation={[0, ang, 0]}>
-      <boxGeometry args={[0.14, 0.004, 0.025]} />
-      <meshStandardMaterial color="#f0c83a" />
-    </mesh>
+    <mesh key={`${dir}${d}`} position={[x + Math.cos(-ang) * d * dir, H + lift + 0.026, z + Math.sin(-ang) * d * dir]} rotation={[0, ang, 0]}
+      geometry={boxGeo([0.14, 0.006, 0.025])} material={voxMat('#f0c83a')} />
   ))
   return <>{half(ax, az, la, 1)}{half(bx, bz, lb, -1)}{kind === 'rail' && <>{ties(ax, az, la, 1)}{ties(bx, bz, lb, -1)}</>}
     {kind === 'highway' && <>{stripe(ax, az, la, 1)}{stripe(bx, bz, lb, -1)}</>}</>
@@ -1152,7 +1119,15 @@ function hintOf(seed: number, h: Hex) {
 
 const STOP_SHORT: Record<string, string> = {
   'sem trilha até o Centro': '½ sem trilha', 'sem estrada até o Centro': '½ sem estrada', 'sem ferrovia até o Centro': '½ sem ferrovia',
-  'sem trabalhadores': '⛔ sem 👤', 'sem energia': '⛔ sem ⚡',
+  'sem trabalhadores': '⛔ sem 👤', 'sem energia': '⛔ sem ⚡', 'metade sem energia': '½ sem ⚡',
+}
+
+// Em tela retrato (celular em pé) a câmera recua para o tabuleiro caber na largura.
+function FitCamera() {
+  const { camera, size } = useThree()
+  const portrait = size.width < size.height
+  useLayoutEffect(() => { camera.position.set(0, portrait ? 18 : 10.5, portrait ? 12.5 : 7.2) }, [portrait, camera])
+  return null
 }
 
 export function Board({ state, buildMode, linkMode, onHex, onEdge }: Props) {
@@ -1183,6 +1158,7 @@ export function Board({ state, buildMode, linkMode, onHex, onEdge }: Props) {
 
   return (
     <>
+      <FitCamera />
       <OrbitControls target={[0, 0, 0.6]} maxPolarAngle={1.1} minDistance={5} maxDistance={26} enablePan />
       <ambientLight intensity={0.45} color="#ffe2c0" />
       <hemisphereLight args={['#ffe6c0', '#3a2414', 0.7]} />

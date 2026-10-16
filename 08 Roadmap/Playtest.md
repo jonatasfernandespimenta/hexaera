@@ -124,4 +124,18 @@ Ritmo por era (mediana): Primitiva 39 · Bronze 21 · Ferro 18 · Medieval 44 ·
 
 Ainda aberto: fome tardia em partidas longas; Contemporânea presa em 👤 (160) e na Cidade Inteligente; mapa cheio no fim.
 
+## Rodada 8 — fome tardia (2026-10-16, 100 partidas)
+**Causa:** Fazenda mecanizada e Estufa pedem ⚡. Quando o carvão/petróleo acabava ou um sabotador derrubava a usina, a ⚡ ia a zero e **toda a comida parava de uma vez** — a cidade morria em ~8 turnos.
+Mudanças:
+- **Produtor sem ⚡ rende metade** (fazenda mecanizada sem energia ainda é fazenda); processador sem ⚡ continua parando. Marcador "½ sem ⚡".
+- Robô mantém estoque de ⚫ e 🛢.
+
+| | Rodada 7 | Rodada 8 |
+|---|---|---|
+| Vitórias | 54% (306 t) | **67% (292 t)** |
+| Derrotas | 16% | **3%** (Centro 2, fome 1) |
+| Chegam à Contemporânea | 58% | **78%** |
+
+Resumo das 8 rodadas: vitória 0% → 67%, derrota 92% → 3%, campanha em ~290 turnos (alvo 250–350). Os 30% restantes ficam sem tempo, sobretudo na Contemporânea (Cidade Inteligente e 160 👤).
+
 Ver [[Vertical Slice]] · [[Roadmap]].

@@ -46,6 +46,9 @@ const Art = ({ id, size = 58 }: { id: BuildingId | Link; size?: number }) =>
 
 type Panel = null | 'trade' | 'log' | 'menu'
 
+// Mesmo corte do layout de celular em style.css.
+const MOBILE = () => matchMedia('(max-width: 820px), (max-height: 520px)').matches
+
 // Save automático da partida (o tutorial não salva).
 const SAVE = 'hexaera.save'
 const TUT_DONE = 'hexaera.tutorial'
@@ -65,10 +68,12 @@ export function App() {
   const [toast, setToast] = useState<string | null>(null)
   const [news, setNews] = useState<string | null>(null)
   const [screen, setScreen] = useState<'menu' | 'game'>('menu')
+  const [sideOpen, setSideOpen] = useState(false)
   const [tut, setTut] = useState<number | null>(null) // passo atual do tutorial
   const tutStart = useRef(state) // estado no início do passo, para detectar a ação pedida
-  const pickBuilding = (id: BuildingId | null) => { setMode(id); setLink(null) }
-  const pickLink = (l: Link | null) => { setLink(l); setMode(null) }
+  const [deck, setDeck] = useState(false) // celular: mão aberta
+  const pickBuilding = (id: BuildingId | null) => { setMode(id); setLink(null); setDeck(false) }
+  const pickLink = (l: Link | null) => { setLink(l); setMode(null); setDeck(false) }
   const toggle = (p: Panel) => setPanel(panel === p ? null : p)
   useEffect(() => setTab(state.era), [state.era])
 
@@ -239,7 +244,8 @@ export function App() {
       </div>
 
       {/* ---------- esquerda: objetivo / contrato ---------- */}
-      <div className="side">
+      {/* No celular os cartões ficam recolhidos (só o título); tocar no título abre/fecha. */}
+      <div className={`side ${sideOpen ? 'open' : ''}`} onClick={e => (e.target as HTMLElement).closest('header') && setSideOpen(!sideOpen)}>
         <div className="pcard">
             <header className="gold">{last ? 'Marco Final' : `Rumo à Era ${NEXT_ERA_NAME[state.era]}`}</header>
             <div className="art sky"><Sprite name="campfire" size={70} /></div>
@@ -344,13 +350,14 @@ export function App() {
 
       {/* ---------- base: mão de cartas ---------- */}
       {hand && (
-        <div className="dock">
+        <div className={`dock ${deck ? 'open' : ''}`} onClick={e => e.target === e.currentTarget && setDeck(false)}>
           <div className="tabs">
             {ERAS.slice(0, state.era + 1).map((e, i) => (
               <button key={i} className={tab === i ? 'sel' : ''} onClick={() => { sfx('click'); setTab(i) }}>{e.name.replace(/^do /, '')}</button>
             ))}
           </div>
-          <div className="hand">
+          {/* No celular a mão é um monte: o primeiro toque abre o leque inteiro; escolher uma carta fecha de novo. */}
+          <div className="hand" onClickCapture={e => { if (MOBILE() && !deck) { e.stopPropagation(); sfx('card'); setDeck(true) } }}>
             {links.map((l, i) => (
               <button key={l} style={fan(i)} className={`card infra ${link === l ? 'sel' : ''}`} onClick={() => { sfx(link === l ? 'uncard' : 'card'); pickLink(link === l ? null : l) }} onMouseEnter={() => sfx('hover')}
                 title="Borda entre hexes · montanha custa o dobro · rio exige ponte (+2 🪵)">
@@ -385,8 +392,8 @@ export function App() {
         </div>
       )}
 
-      {mode && <div className="hint frame">Escolha um hex destacado · Esc cancela</div>}
-      {link && <div className="hint frame">Clique numa borda entre dois hexes · Esc cancela</div>}
+      {mode && <div className="hint frame">{BUILDINGS[mode].name}: escolha um hex destacado <button className="x" onClick={() => { sfx('uncard'); pickBuilding(null) }}>✕</button></div>}
+      {link && <div className="hint frame">{LINKS[link].name}: toque numa borda entre dois hexes <button className="x" onClick={() => { sfx('uncard'); pickLink(null) }}>✕</button></div>}
       {toast && <div className="toast frame">{toast}</div>}
       {!toast && news && <div className="news frame">{news}</div>}
 

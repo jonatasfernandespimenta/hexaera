@@ -211,7 +211,7 @@ export function stopped(s: State): Record<string, string> {
     const why = stopReason(s, k, free)
     if (why) out[k] = why
   }
-  for (const k of run(s).unpowered) out[k] = 'sem energia'
+  for (const k of run(s).unpowered) out[k] = BUILDINGS[s.tiles[k].building!.id].consumes ? 'sem energia' : 'metade sem energia'
   return out
 }
 
@@ -293,7 +293,13 @@ export function run(s: State) {
   for (const k of procs.filter(k => !plants.includes(k))) {
     const def = BUILDINGS[s.tiles[k].building!.id]
     const need = def.needsPower ?? 0
-    if (need > supply - used) { unpowered.push(k); continue }
+    if (need > supply - used) {
+      unpowered.push(k)
+      // Produtor puro (fazenda mecanizada, estufa…) sem ⚡ ainda rende metade; processador para.
+      if (!def.consumes) for (const [r, v] of Object.entries(def.produces ?? {}) as [Res, number][])
+        out[r] += Math.floor(v * 0.5 * half(k) * m * (r === 'food' ? fm : 1))
+      continue
+    }
     if (!consume(def.consumes ?? {})) continue
     used += need
     for (const [r, v] of Object.entries(def.produces ?? {}) as [Res, number][])

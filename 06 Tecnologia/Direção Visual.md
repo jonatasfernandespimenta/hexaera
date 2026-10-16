@@ -122,3 +122,12 @@ Pendente: ambiente variar com o terreno visível e com a era (cidade industrial 
 - **Eventos:** a carta voa do canto esquerdo para o meio da tela e escurece o fundo até o jogador escolher.
 
 Sprites de interface: `atlas4.png` (construções Bronze→Industrial e recursos) e `atlas5.png` (ações, poluição, reputação, vida, turno, botões, Trilha/Estrada, casas por era, Fazenda/Campo).
+
+## Modelos feitos à mão no padrão do pack
+`game/src/scene/voxbox.tsx`. Tudo que não vem do pack MagicaVoxel segue o mesmo visual:
+- **Caixas** usam um material com textura de voxel no shader: células de 0,02 com leve variação de tom, aresta do topo mais clara e base mais escura (como o sombreamento dos modelos importados). Zero custo extra de geometria.
+- **Formas curvas** (cilindro, cone/pirâmide, cúpula, anel, telhado arredondado) viram **degraus de voxel**, fundidos numa geometria por forma (`<Shape kind=…>`). Nada de cilindro/esfera lisa no tabuleiro.
+- Exceções de propósito: peças hexagonais do tabuleiro, moedas e dados da mesa (têm ícone impresso).
+
+## Celular
+Layout em `style.css` (`@media (max-width: 820px), (max-height: 520px)`): barra de recursos rolável, Objetivo/Contrato recolhidos (toca no título), botões redondos à direita sem minimapa, painéis viram folha de baixo, câmera recua em retrato. **Mão de cartas vira um monte**; tocar abre todas em grade sobre a tela escurecida e escolher uma fecha de novo.
