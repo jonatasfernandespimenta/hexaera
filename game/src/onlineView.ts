@@ -1,7 +1,8 @@
 // Partida online: cálculos puros da cena e da interface (comitivas no mapa, faixa neutra, cargas, telas finais).
 import { CARGO_PER_WORKER, type Convoy } from './core/convoy'
 import type { Bag } from './core/data'
-import type { State } from './core/game'
+import { canChoose, type State } from './core/game'
+import { EVENT_BY_ID } from './core/events'
 import { distance, toWorld, type Hex } from './core/hex'
 import { neutral, type Mode } from './core/match'
 
@@ -59,3 +60,13 @@ export function endText(mode: Mode, over: 'won' | 'lost', rival: string) {
 export type ClockRun = { fired: boolean; pending: boolean; retryAt: number }
 export const shouldFire = (left: number, r: ClockRun, blocked: boolean, now: number) =>
   left === 0 && !r.fired && !r.pending && !blocked && now >= r.retryAt
+
+// Jogador ausente com evento aberto: ao zerar o relógio, resolve o evento (depois o envio segue normal).
+export const shouldResolve = (left: number, r: ClockRun, blocked: boolean) => left === 0 && blocked && !r.fired && !r.pending
+
+// Primeira opção do evento aberto que pode ser escolhida; null se não há evento ou nenhuma serve.
+export function autoOption(s: State): number | null {
+  if (!s.event) return null
+  const i = EVENT_BY_ID[s.event].options.findIndex(o => canChoose(s, o) === null)
+  return i < 0 ? null : i
+}

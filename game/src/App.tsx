@@ -3,14 +3,14 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { BUILDINGS, CONTRACT_EVERY, CONTRACTS, EVENT_EVERY, ERAS, LINKS, RES, TERRAINS, type BuildingId, type Link, type Res } from './core/data'
 import { EVENT_BY_ID } from './core/events'
 import {
-  abandon, accept, advanceEra, buildRail, canPlace, railPath, demolish, DEMOLISH_COST, SANDBOX_DEFAULT, type Sandbox, keepPlaying, terrainsOf, decline, DECLINE_COST, affordable, build, buildLink, canChoose, centerMax, contractReward, debt, deliver, endTurn, eraGoals,
+  abandon, accept, advanceEra, buildRail, buildTurns, canPlace, railPath, demolish, DEMOLISH_COST, SANDBOX_DEFAULT, type Sandbox, keepPlaying, terrainsOf, decline, DECLINE_COST, affordable, build, buildLink, canChoose, centerMax, contractReward, debt, deliver, endTurn, eraGoals,
   explore, happiness, pollutionDelta, run, terrainAt, housing, hunt, idle, income, maxActions, maxContracts, newGame, resolveEvent, shortfall, type State,
 } from './core/game'
 import { normalize } from './core/match'
 import { distance, key, toWorld, type Hex } from './core/hex'
 import { Board, ConvoyMarker, NeutralStrip } from './scene/Board'
 import { MilitaryCard, RivalStatus, useTurnClock } from './OnlineHud'
-import { convoyMarkers, endText, neutralStrip } from './onlineView'
+import { autoOption, convoyMarkers, endText, neutralStrip } from './onlineView'
 import type { Convoy } from './core/convoy'
 import { Minimap } from './Minimap'
 import { Sprite, type SpriteName } from './Sprite'
@@ -216,9 +216,10 @@ export function App() {
     if (!canEnd) return Promise.resolve(false)
     return online.endTurn().then(ok => { sfx(ok ? 'turn' : 'error'); return ok })
   }
-  // Relógio da partida: ao zerar, envia o turno como o botão (espera o evento aberto ser resolvido).
+  // Relógio da partida: ao zerar, envia o turno como o botão; evento aberto é resolvido antes com a primeira opção possível.
+  const autoResolve = () => { const i = autoOption(state); if (i !== null) act(() => resolveEvent(state, i)) }
   const clock = useTurnClock(matchId ? online.meta?.timer ?? 0 : 0, !!matchId && online.phase === 'playing' && !state.over, state.turn,
-    !!state.event, finishTurn)
+    !!state.event, finishTurn, autoResolve)
   // Erros da sessão online aparecem no aviso de sempre.
   useEffect(() => { if (online.error && screen === 'game') setToast(online.error) }, [online.error, screen])
   const goStep = (i: number, s = state) => {
@@ -552,7 +553,7 @@ export function App() {
                   <footer>
                     <span className="chip"><Sprite name="hand" size={16} />{b.actions}</span><Cost b={b.cost} />
                     {b.workers > 0 && <span className="chip">👤{b.workers}</span>}
-                    <span className="chip">⏱{b.turns}</span>
+                    <span className="chip">⏱{buildTurns(state, id)}</span>
                   </footer>
                 </button>
               )

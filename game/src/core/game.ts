@@ -431,6 +431,9 @@ export function shortfall(s: State, id: BuildingId): string | null {
   return miss.length ? tr('Você ficará devendo {0}.', miss.join(', ')) : null
 }
 
+// Turnos de obra: metade (para cima) no ritmo rápido do multiplayer.
+export const buildTurns = (s: State, id: BuildingId) => (s.match?.fast ? Math.ceil(BUILDINGS[id].turns / 2) : BUILDINGS[id].turns)
+
 export function build(prev: State, h: Hex, id: BuildingId): State {
   guard(prev)
   const err = canPlace(prev, h, id) ?? affordable(prev, id)
@@ -446,7 +449,7 @@ export function build(prev: State, h: Hex, id: BuildingId): State {
     t.terrain = 'plains'
     s.res.wood += CLEAR_FOREST_WOOD
   }
-  t.building = { id, turnsLeft: s.match?.fast ? Math.ceil(def.turns / 2) : def.turns, hp: def.hp, ...(up && { up }) }
+  t.building = { id, turnsLeft: buildTurns(s, id), hp: def.hp, ...(up && { up }) }
   return s
 }
 

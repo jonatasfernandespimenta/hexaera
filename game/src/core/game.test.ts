@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
 import {
-  abandon, accept, advanceEra, build, buildRail, railPath, decline, demolish, eraGoals, housing, idle, keepPlaying, maxActions, buildLink, deliver, endTurn, hunt, offGrid, staffed, stopped, trade, linkCost, run, pollutionDelta, explore, exploreCost, happiness, hiddenHexes, newGame, production, resolveEvent, terrainAt,
+  abandon, accept, advanceEra, build, buildRail, buildTurns, railPath, decline, demolish, eraGoals, housing, idle, keepPlaying, maxActions, buildLink, deliver, endTurn, hunt, offGrid, staffed, stopped, trade, linkCost, run, pollutionDelta, explore, exploreCost, happiness, hiddenHexes, newGame, production, resolveEvent, terrainAt,
   type State,
 } from './game'
 import { neighbors, parse } from './hex'
@@ -324,4 +324,11 @@ test('ferrovia por rota (origem → destino) ocupa os hexes e liga os vizinhos; 
   expect(s.res.steel).toBe(steel + 1) // metade de 2
   expect(s.actions).toBe(acts - 1)
   expect(offGrid(s, '3,0')).toBe('sem ferrovia até o Centro') // rede cortada
+})
+
+test('buildTurns: metade (para cima) no ritmo rápido', async () => {
+  const { newMatchGame } = await import('./match')
+  const slow = newGame(1), fast = newMatchGame(1, 'coop', 0, true)
+  expect(buildTurns(slow, 'mechfarm')).toBe(2)
+  expect(buildTurns(fast, 'mechfarm')).toBe(1)
 })

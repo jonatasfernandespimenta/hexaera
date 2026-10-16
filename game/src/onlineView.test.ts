@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Convoy } from './core/convoy'
 import { distance, toWorld } from './core/hex'
 import { neutral, newMatchGame, RIVAL_DISTANCE } from './core/match'
-import { carriers, convoyFraction, convoyMarkers, endText, neutralStrip, shouldFire } from './onlineView'
+import { autoOption, carriers, convoyFraction, convoyMarkers, endText, neutralStrip, shouldFire, shouldResolve } from './onlineView'
 
 const cv = (o: Partial<Convoy>): Convoy => ({ id: 'x', kind: 'army', sent: 2, arrive: 6, n: 3, ...o })
 
@@ -88,5 +88,22 @@ describe('shouldFire', () => {
   it('depois de uma falha só tenta de novo após a pausa', () => {
     expect(shouldFire(0, { ...run, retryAt: 4000 }, false, 3999)).toBe(false)
     expect(shouldFire(0, { ...run, retryAt: 4000 }, false, 4000)).toBe(true)
+  })
+})
+
+describe('evento aberto com o relógio zerado (AFK)', () => {
+  const run = { fired: false, pending: false, retryAt: 0 }
+  it('resolve só ao zerar, com evento aberto e sem envio pendente', () => {
+    expect(shouldResolve(0, run, true)).toBe(true)
+    expect(shouldResolve(1, run, true)).toBe(false)
+    expect(shouldResolve(0, run, false)).toBe(false)
+    expect(shouldResolve(0, { ...run, pending: true }, true)).toBe(false)
+    expect(shouldResolve(0, { ...run, fired: true }, true)).toBe(false)
+  })
+  it('escolhe a primeira opção disponível', () => {
+    const s = { ...newMatchGame(5, 'coop', 0, false), event: 'manada' }
+    expect(autoOption(s)).toBe(0)
+    expect(autoOption({ ...s, actions: 0 })).toBe(1) // Caçar custa 2 ✋
+    expect(autoOption({ ...s, event: null })).toBeNull()
   })
 })

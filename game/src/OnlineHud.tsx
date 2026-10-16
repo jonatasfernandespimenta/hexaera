@@ -4,20 +4,23 @@ import { sendAid, sendArmy, sendCargo, travelTurns, type Convoy } from './core/c
 import { TROOP_COST, type Bag, type Res } from './core/data'
 import { idle, recruit, type State } from './core/game'
 import type { Mode } from './core/match'
-import { carriers, shouldFire, type ClockRun } from './onlineView'
+import { carriers, shouldFire, shouldResolve, type ClockRun } from './onlineView'
 import type { RivalView } from './server/matches'
 
 type Sent = { state: State; convoy: Convoy }
 const errOf = (fn: () => unknown) => { try { fn(); return null } catch (e) { return (e as Error).message } }
 
 // Relógio do turno: conta `seconds` a partir de quando o turno fica jogável; ao zerar chama onZero
-// até um envio dar certo (no máximo um por turno). Com evento aberto (blocked) espera; após falha, tenta de novo em RETRY_MS.
+// até um envio dar certo (no máximo um por turno). Com evento aberto (blocked) chama onBlocked para resolvê-lo
+// (jogador ausente não trava a partida) e envia em seguida; após falha, tenta de novo em RETRY_MS.
 // Recomeça a cada turno. Sem relógio (0) devolve null.
 const RETRY_MS = 3000
-export function useTurnClock(seconds: number, active: boolean, turn: number, blocked: boolean, onZero: () => Promise<boolean>) {
+export function useTurnClock(seconds: number, active: boolean, turn: number, blocked: boolean, onZero: () => Promise<boolean>, onBlocked: () => void) {
   const [left, setLeft] = useState<{ turn: number; l: number } | null>(null)
   const zero = useRef(onZero)
   zero.current = onZero
+  const unblock = useRef(onBlocked)
+  unblock.current = onBlocked
   const block = useRef(blocked)
   block.current = blocked
   const run = useRef<ClockRun & { turn: number; start: number } | null>(null)
@@ -28,6 +31,7 @@ export function useTurnClock(seconds: number, active: boolean, turn: number, blo
     const tick = () => {
       const l = Math.max(0, Math.ceil(seconds - (Date.now() - r.start) / 1000))
       setLeft(p => (p?.turn === turn && p.l === l ? p : { turn, l })) // sem mudança: sem render
+      if (shouldResolve(l, r, block.current)) return unblock.current()
       if (!shouldFire(l, r, block.current, Date.now())) return
       r.pending = true
       zero.current().catch(() => false).then(ok => {
