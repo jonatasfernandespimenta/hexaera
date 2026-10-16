@@ -1,3 +1,4 @@
+// Lê `location`: só pode carregar no cliente (importado com ssr:false em app/page.tsx)
 import { App } from './App'
 import { Catalog } from './Catalog'
 
