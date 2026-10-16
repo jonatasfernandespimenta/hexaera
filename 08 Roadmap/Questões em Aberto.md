@@ -4,10 +4,10 @@ tags: [roadmap, decisoes]
 # Questões em Aberto
 
 - [ ] **Nome final** — Hexaera vs Eras & Embers. Ver [[Nome do Jogo]].
-- [x] ~~**Coop online ou só local?**~~ → local (hot-seat).
+- [x] ~~**Coop online ou só local?**~~ → **online**, 2 jogadores, turno simultâneo (substitui a decisão de hot-seat). Ver [[Cooperativo]].
 - [ ] **Comércio entra no core ou é opcional?** (Marcado como "talvez" na ideia original.)
 - [ ] **Modelo mobile**: premium + DLC ou F2P cosmético?
-- [x] ~~**Multiplayer**~~ → solo + coop em todas as versões.
+- [x] ~~**Multiplayer**~~ → solo + coop online + [[Versus]] (digital, até 2 jogadores). No tabuleiro físico: solo + coop.
 - [x] ~~**Como funciona o coop?**~~ → cada jogador com sua cidade, trocas entre elas. Ver [[Cooperativo]].
 - [ ] **Combate**: determinístico puro ou com dado?
 - [ ] **Escala de números**: valores pequenos (board-friendly) também no digital?
@@ -27,3 +27,5 @@ tags: [roadmap, decisoes]
 - [x] ~~Ícones~~ → tabela em [[Direção Visual#Ícones (decidido)]].
 - [x] ~~Onde ficam as cidades no coop?~~ → mesmo mapa, separadas por fronteira (rio ou tiles cinza neutros). Ver [[Cooperativo#Mapa compartilhado (decidido)]].
 - [x] ~~Invasores interceptam carga?~~ → sim; incentiva torres ao longo das rotas.
+- [ ] **Ritmo rápido com humanos** 🧪 — `abundance 5`, `pace 0.4` calibrados só com o bot (alvo 60–80 turnos). Falta playtest. Ver [[Versus#Ritmo rápido]].
+- [ ] **Coop: interceptação, contratos compartilhados, eventos de coop e infra na fronteira** — não implementados. Ver [[Cooperativo#Ainda não implementado]].
