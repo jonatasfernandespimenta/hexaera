@@ -119,9 +119,12 @@ export function App() {
   const online = useOnline(matchId)
   // Online: o jogo lê e escreve o estado da sessão; senão, o jogo local de sempre.
   const state = matchId && online.state ? online.state : solo
+  const rivalName = online.seat === null ? 'rival' : online.meta?.names[1 - online.seat] ?? 'rival'
+  // Online só se mexe na própria vez: o turno enviado não muda mais (e nada cai na sessão antes de carregar).
+  const lock = !matchId ? null : online.sending ? 'Enviando o turno…' : online.phase !== 'playing' || !online.state ? `Esperando ${rivalName}…` : null
   const setState = (v: State | ((s: State) => State)) => {
     if (!matchId) return setSolo(v)
-    online.setState(typeof v === 'function' ? v(state) : v)
+    if (!lock) online.setState(typeof v === 'function' ? v(state) : v)
   }
   const [mode, setMode] = useState<BuildingId | null>(null)
   const [link, setLink] = useState<Link | null>(null)
@@ -158,6 +161,7 @@ export function App() {
   }
 
   const act = (fn: () => State, s: Sfx = 'click') => {
+    if (lock) { setToast(lock); sfx('error'); return }
     try { setState(fn()); sfx(s) } catch (e) { setToast((e as Error).message); sfx('error') }
   }
 
@@ -191,12 +195,13 @@ export function App() {
     setTut(null); setPanel(null); setMode(null); setLink(null); setScreen('game')
   }, [screen, matchId, online.phase])
   // Fim do turno: online envia ao servidor (travado enquanto envia ou espera o rival).
-  const canEnd = !matchId || (online.phase === 'playing' && !online.sending)
+  const canEnd = !lock
   const finishTurn = () => {
     if (!matchId) return act(() => endTurn(state), 'turn')
-    if (canEnd) { sfx('turn'); online.endTurn() }
+    if (canEnd) online.endTurn().then(ok => sfx(ok ? 'turn' : 'error'))
   }
-  const rivalName = online.seat === null ? 'rival' : online.meta?.names[1 - online.seat] ?? 'rival'
+  // Erros da sessão online aparecem no aviso de sempre.
+  useEffect(() => { if (online.error && screen === 'game') setToast(online.error) }, [online.error, screen])
   const goStep = (i: number, s = state) => {
     const n = STEPS[i].setup?.(s) ?? s
     tutStart.current = n

@@ -111,10 +111,12 @@ export function useOnline(id: string | null) {
   }, [])
 
   // "Fim do turno": salva o estado antes do endTurn, envia o turno e relê (o fechamento vem no apply).
+  // Resolve true se o turno foi enviado sem erro.
   const endTurn = useCallback(async () => {
     const { creds, local } = cur.current
-    if (!id || !creds || !local || phaseRef.current !== 'playing' || sending.current) return
-    try { guard(local) } catch (e) { setError(msg(e)); return }
+    if (!id || !creds || !local || phaseRef.current !== 'playing' || sending.current) return false
+    try { guard(local) } catch (e) { setError(msg(e)); return false }
+    let ok = false
     sending.current = true
     setSending(true)
     await run(async () => {
@@ -126,6 +128,7 @@ export function useOnline(id: string | null) {
         await submit(id, creds.token, { turn: T, sent: cur.current.outbox, vote: cur.current.vote })
         resetTurn()
         await refresh()
+        ok = true
       } catch (e) {
         setError(msg(e))
         // A resposta pode ter se perdido com o envio aceito: o servidor diz se o turno já foi.
@@ -135,6 +138,7 @@ export function useOnline(id: string | null) {
         await apply(v, creds).catch(() => {})
       }
     }).finally(() => { sending.current = false; setSending(false) })
+    return ok
   }, [id, run, refresh, apply])
 
   return { meta, seat, phase, state, setState, rival, outbox, addConvoy, vote, setVote: setVoteCb, endTurn, sending: sendingNow, error }
