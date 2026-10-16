@@ -12,7 +12,8 @@ export type OnlinePhase = 'loading' | Phase | 'error'
 
 const msg = (e: unknown) => (e instanceof Error ? e.message : 'Erro de conexão.')
 
-export function useOnline(id: string) {
+// Sem partida (id null) não faz nada: fica em 'loading' com tudo null.
+export function useOnline(id: string | null) {
   const [meta, setMeta] = useState<Meta | null>(null)
   const [seat, setSeat] = useState<0 | 1 | null>(null)
   const [phase, setPhase] = useState<OnlinePhase>('loading')
@@ -45,6 +46,7 @@ export function useOnline(id: string) {
 
   // Aplica uma leitura do servidor ao estado local; fecha o turno se os dois já enviaram.
   const apply = useCallback(async (v: View, creds: Creds) => {
+    if (!id || cur.current.creds !== creds) return // trocou de partida no meio da requisição
     setMeta(v.meta); setSeat(v.seat); setRival(v.rival)
     cur.current.coop = v.meta.mode === 'coop'
     let local = cur.current.local!
@@ -64,7 +66,7 @@ export function useOnline(id: string) {
 
   const refresh = useCallback(async () => {
     const creds = cur.current.creds
-    if (!creds) return
+    if (!creds || !id) return
     await apply(await view(id, creds.token), creds)
     setError(null)
   }, [id, apply])
@@ -72,9 +74,11 @@ export function useOnline(id: string) {
   // Entrada: credenciais, primeira leitura e estado salvo (ou partida nova).
   useEffect(() => {
     let alive = true
-    const creds = getCreds(id)
+    const creds = id ? getCreds(id) : null
     cur.current = { creds, coop: false, local: null, outbox: [], vote: false }
     setPhase('loading'); setError(null); setOutbox([]); setVote(false)
+    setMeta(null); setSeat(null); setRival(null); setLocal(null)
+    if (!id) return
     if (!creds) { setPhase('error'); setError('Você não está nesta partida.'); return }
     run(async () => {
       const v = await view(id, creds.token)
@@ -109,7 +113,7 @@ export function useOnline(id: string) {
   // "Fim do turno": salva o estado antes do endTurn, envia o turno e relê (o fechamento vem no apply).
   const endTurn = useCallback(async () => {
     const { creds, local } = cur.current
-    if (!creds || !local || phaseRef.current !== 'playing' || sending.current) return
+    if (!id || !creds || !local || phaseRef.current !== 'playing' || sending.current) return
     try { guard(local) } catch (e) { setError(msg(e)); return }
     sending.current = true
     setSending(true)

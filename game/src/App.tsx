@@ -15,6 +15,9 @@ import { Trade } from './Trade'
 import { Coach, STEPS } from './Tutorial'
 import { isMuted, setMuted, sfx, startAmbience, type Sfx } from './sfx'
 import { lang, setLang, t } from './i18n'
+import { Lobby } from './Lobby'
+import { getCreds } from './net'
+import { useOnline } from './useOnline'
 
 const sign = (n: number) => (n > 0 ? `+${n}` : `${n}`)
 // Ícone de cada recurso (atlas em public/ui).
@@ -94,9 +97,9 @@ function SandboxSetup({ value, onChange, onBack, onStart }: { value: Sandbox; on
   )
 }
 
-// Dev: localhost:5179/?teste abre um jogo pronto para testar transporte — Moderna (Rodovia + Ferrovia),
+// Dev: /?teste abre um jogo pronto para testar transporte — Moderna (Rodovia + Ferrovia),
 // 999 de cada recurso, 99 ✋, mapa revelado até o anel 3, sem invasões. Não salva por cima do jogo normal.
-const TEST = import.meta.env.DEV && new URLSearchParams(location.search).has('teste')
+const TEST = process.env.NODE_ENV === 'development' && new URLSearchParams(location.search).has('teste')
 function testGame(): State {
   const s = newGame(42, { threats: 0, abundance: 1, pace: 1, market: 'volatil', era: 5 })
   for (const r of Object.keys(s.res) as Res[]) s.res[r] = 999
@@ -105,8 +108,21 @@ function testGame(): State {
   return { ...s, pop: 60, actions: 99, event: null }
 }
 
+// Partida online pela URL (?match=id): com credencial entra direto; sem, a sala pede o apelido.
+const URL_MATCH = () => new URLSearchParams(location.search).get('match')
+const clearUrl = () => history.replaceState(null, '', location.pathname)
+
 export function App() {
-  const [state, setState] = useState<State>(() => TEST ? testGame() : loadSave() ?? newGame())
+  const [solo, setSolo] = useState<State>(() => TEST ? testGame() : loadSave() ?? newGame())
+  const [matchId, setMatchId] = useState<string | null>(() => { const id = URL_MATCH(); return id && getCreds(id) ? id : null })
+  const [joinId, setJoinId] = useState<string | null>(() => { const id = URL_MATCH(); return id && !getCreds(id) ? id : null })
+  const online = useOnline(matchId)
+  // Online: o jogo lê e escreve o estado da sessão; senão, o jogo local de sempre.
+  const state = matchId && online.state ? online.state : solo
+  const setState = (v: State | ((s: State) => State)) => {
+    if (!matchId) return setSolo(v)
+    online.setState(typeof v === 'function' ? v(state) : v)
+  }
   const [mode, setMode] = useState<BuildingId | null>(null)
   const [link, setLink] = useState<Link | null>(null)
   const [tab, setTab] = useState(0) // era exibida na mão de cartas
@@ -114,7 +130,7 @@ export function App() {
   const [hand, setHand] = useState(true)
   const [toast, setToast] = useState<string | null>(null)
   const [news, setNews] = useState<string | null>(null)
-  const [screen, setScreen] = useState<'menu' | 'game'>(TEST ? 'game' : 'menu')
+  const [screen, setScreen] = useState<'menu' | 'online' | 'game'>(() => (TEST ? 'game' : URL_MATCH() ? 'online' : 'menu'))
   const [sideOpen, setSideOpen] = useState(false)
   const [setup, setSetup] = useState<Sandbox | null>(null) // tela de opções do Sandbox
   const [tut, setTut] = useState<number | null>(null) // passo atual do tutorial
@@ -164,9 +180,23 @@ export function App() {
     return () => window.removeEventListener('pointerdown', go)
   }, [])
 
-  useEffect(() => { if (screen === 'game' && tut === null && !TEST) store.set(SAVE, JSON.stringify(state)) }, [state, screen, tut])
+  useEffect(() => { if (screen === 'game' && tut === null && !matchId && !TEST) store.set(SAVE, JSON.stringify(state)) }, [state, screen, tut, matchId])
 
-  const play = (s: State) => { setState(s); setTut(null); setPanel(null); setMode(null); setLink(null); setScreen('game') }
+  // Sai da partida online (as credenciais ficam: o link retoma depois).
+  const leave = () => { setMatchId(null); setJoinId(null); clearUrl() }
+  const play = (s: State) => { if (matchId) leave(); setSolo(s); setTut(null); setPanel(null); setMode(null); setLink(null); setScreen('game') }
+  // Sala online: quando o segundo jogador chega (ou a partida já corria), vai para o jogo.
+  useEffect(() => {
+    if (screen !== 'online' || !matchId || !['playing', 'waiting', 'close'].includes(online.phase)) return
+    setTut(null); setPanel(null); setMode(null); setLink(null); setScreen('game')
+  }, [screen, matchId, online.phase])
+  // Fim do turno: online envia ao servidor (travado enquanto envia ou espera o rival).
+  const canEnd = !matchId || (online.phase === 'playing' && !online.sending)
+  const finishTurn = () => {
+    if (!matchId) return act(() => endTurn(state), 'turn')
+    if (canEnd) { sfx('turn'); online.endTurn() }
+  }
+  const rivalName = online.seat === null ? 'rival' : online.meta?.names[1 - online.seat] ?? 'rival'
   const goStep = (i: number, s = state) => {
     const n = STEPS[i].setup?.(s) ?? s
     tutStart.current = n
@@ -197,7 +227,7 @@ export function App() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') { if (mode || link || wreck) sfx('uncard'); setMode(null); setLink(null); setWreck(false); setRailFrom(null); setRailTo(null); setPanel(null) }
-      if (e.key === 'Enter' && screen === 'game' && !fp && !state.over && !state.event) act(() => endTurn(state), 'turn')
+      if (e.key === 'Enter' && screen === 'game' && !fp && !state.over && !state.event) finishTurn()
       if (e.code === 'KeyP' && screen === 'game' && !MOBILE()) { setFp(v => !v); setMode(null); setLink(null); setPanel(null) }
     }
     window.addEventListener('keydown', onKey)
@@ -266,7 +296,7 @@ export function App() {
     </>
   )
 
-  if (screen === 'menu') {
+  if (screen !== 'game') {
     const save = loadSave()
     const fresh = !store.get(TUT_DONE)
     return (
@@ -276,11 +306,14 @@ export function App() {
         <div className="title">
           <h1>Hexaera</h1>
           <p>{t('Da fogueira à metrópole')}</p>
-          {setup ? <SandboxSetup value={setup} onChange={setSetup} onBack={() => setSetup(null)}
+          {screen === 'online' ? <Lobby matchId={matchId} joinId={joinId} phase={online.phase} error={online.error}
+            onEnter={id => { setJoinId(null); setMatchId(id) }} onBack={() => { leave(); setScreen('menu') }} />
+          : setup ? <SandboxSetup value={setup} onChange={setSetup} onBack={() => setSetup(null)}
             onStart={() => { play(newGame(undefined, setup)); setSetup(null) }} /> : <div className="pcard menu">
             {save && <button className="opt green" onClick={() => play(save)}><b>{t('Continuar')}</b><span>{t('Era {0} · turno {1}', ERAS[save.era].name, save.turn)}</span></button>}
             <button className={`opt ${save || fresh ? 'dark' : 'green'}`} onClick={() => play(newGame())}><b>{t('Nova civilização')}</b>{save && <span>{t('substitui o jogo salvo')}</span>}</button>
             <button className={`opt ${fresh ? 'green' : 'dark'}`} onClick={startTutorial}><b>{t('Tutorial')}</b><span>{t(fresh ? 'recomendado · 2 minutos' : 'rever as mecânicas')}</span></button>
+            <button className="opt dark" onClick={() => { sfx('card'); setScreen('online') }}><b>Jogar online</b><span>coop ou versus com um amigo</span></button>
             <button className="opt dark" onClick={() => { sfx('card'); setSetup(SANDBOX_DEFAULT) }}><b>Sandbox</b><span>{t('sem objetivo · você ajusta o mundo')}</span></button>
             <button className="opt dark" onClick={() => { setMuted(!mute); setMute(!mute); if (mute) sfx('click') }}><b>{t(mute ? '🔇 Som desligado' : '🔊 Som ligado')}</b></button>
             <LangToggle />
@@ -323,7 +356,9 @@ export function App() {
             </div>
           </div>
         </div>
-        <button className="endturn" onClick={() => act(() => endTurn(state), 'turn')} disabled={!!state.over || !!state.event}>{t('Fim do turno')}</button>
+        <button className="endturn" onClick={finishTurn} disabled={!!state.over || !!state.event || !canEnd}>
+          {matchId && online.phase === 'waiting' ? `Esperando ${rivalName}…` : t('Fim do turno')}
+        </button>
       </div>
 
       {/* ---------- esquerda: objetivo / contrato ---------- */}
@@ -426,7 +461,7 @@ export function App() {
       {panel === 'menu' && (
         <div className="popover frame">
           <h3>⚙️ Menu</h3>
-          <button className="opt dark" onClick={() => { setPanel(null); setTut(null); setScreen('menu') }}><b>{t('Menu principal')}</b></button>
+          <button className="opt dark" onClick={() => { setPanel(null); setTut(null); if (matchId) leave(); setScreen('menu') }}><b>{t('Menu principal')}</b></button>
           <button className="opt dark" onClick={() => play(newGame())}><b>{t('Nova civilização')}</b></button>
           <button className="opt dark" onClick={() => { setMuted(!mute); setMute(!mute); if (mute) sfx('click') }}><b>{t(mute ? '🔇 Som desligado' : '🔊 Som ligado')}</b></button>
           <LangToggle />

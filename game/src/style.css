@@ -371,3 +371,10 @@ button { font: inherit; cursor: pointer; }
 /* primeira pessoa */
 .fphint { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); font-size: 14px; z-index: 10; }
 .crosshair { position: fixed; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px; background: #f4e6c4; box-shadow: 0 0 0 2px #0008; pointer-events: none; }
+
+/* sala online */
+.field { flex: 1 1 140px; min-width: 0; padding: 4px 6px; font: inherit; font-size: 14px; color: var(--ink); background: #fff8e8; border: 2px solid #b4915c; }
+.setrow > .field { width: 100%; box-sizing: border-box; }
+.lobbywait { text-align: center !important; animation: pulse-text 1.4s ease-in-out infinite; }
+@keyframes pulse-text { 50% { opacity: 0.5; } }
+.pcard .lobbyerr { color: #a3261b; font-weight: bold; text-align: center; }
