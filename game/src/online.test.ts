@@ -60,7 +60,7 @@ test('rival perdeu no versus → venci ao fechar o turno', () => {
 
 test('exército que chega em T vira aviso ao fechar T e invasores no turno seguinte', () => {
   const s = newMatchGame(5, 'versus', 0, true)
-  const army: Convoy = { id: '1-1-0', kind: 'army', sent: 1, arrive: 1, n: 3, power: 0 }
+  const army: Convoy = { id: '1-0-0', kind: 'army', sent: 0, arrive: 1, n: 3, power: 0 }
   const closed = close(s, rival({ sent: [army] }))
   expect(closed.raids).toHaveLength(1)
   expect(closed.invaders).toHaveLength(0)

@@ -53,3 +53,25 @@ test('sendArmy no coop e sendAid no versus lançam erro', () => {
   expect(() => sendCargo(v, { wood: 1 })).toThrow()
   expect(() => sendArmy(vs(1), 2)).toThrow()
 })
+test('receive ignora comitivas forjadas e aplica as válidas (nunca lança)', () => {
+  const v = vs(0)
+  const forged = [
+    army(3, 99), army(3, -1), { ...army(), n: 1e8 }, { ...army(), kind: 'aid' as const }, null,
+    { ...army(), arrive: 3 }, { ...army(), arrive: 20 }, { ...army(), id: 7 }, { ...army(), n: undefined },
+  ] as unknown as Convoy[]
+  const d = receive(v, [...forged, army()])
+  expect(d.raids).toEqual([expect.objectContaining({ kind: 2, n: 3 })])
+  expect(() => endTurn(d)).not.toThrow()
+  const c = coop()
+  const bad = [
+    { id: 'x', kind: 'cargo', sent: 1, arrive: 3, bag: { gold: 5 } },
+    { id: 'x', kind: 'cargo', sent: 1, arrive: 3, bag: { toString: 5 } },
+    { id: 'x', kind: 'cargo', sent: 1, arrive: 3, bag: { wood: -5 } },
+    { id: 'x', kind: 'cargo', sent: 1, arrive: 3, bag: { wood: 10_001 } },
+    { id: 'x', kind: 'aid', sent: 1, arrive: 3, n: 501 },
+    { id: 'x', kind: 'army', sent: 1, arrive: 3, n: 2, power: 0 },
+  ] as unknown as Convoy[]
+  const r = receive(c, [...bad, { id: 'ok', kind: 'cargo', sent: 1, arrive: 3, bag: { wood: 4 } }])
+  expect([r.res.wood, r.troops, r.raids]).toEqual([c.res.wood + 4, 0, []])
+  expect(Object.keys(r.res)).toEqual(Object.keys(c.res))
+})
