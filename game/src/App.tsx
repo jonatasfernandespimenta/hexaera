@@ -21,6 +21,7 @@ import { lang, setLang, t } from './i18n'
 import { Lobby } from './Lobby'
 import { getCreds } from './net'
 import { useOnline } from './useOnline'
+import { usePresence } from './usePresence'
 
 const sign = (n: number) => (n > 0 ? `+${n}` : `${n}`)
 // Ícone de cada recurso (atlas em public/ui).
@@ -120,6 +121,7 @@ export function App() {
   const [matchId, setMatchId] = useState<string | null>(() => { const id = URL_MATCH(); return id && getCreds(id) ? id : null })
   const [joinId, setJoinId] = useState<string | null>(() => { const id = URL_MATCH(); return id && !getCreds(id) ? id : null })
   const online = useOnline(matchId)
+  const playing = usePresence() // abas abertas do jogo (solo + online)
   // Online: o jogo lê e escreve o estado da sessão; senão, o jogo local de sempre.
   const state = matchId && online.state ? online.state : solo
   const rivalName = online.seat === null ? t('rival') : online.meta?.names[1 - online.seat] ?? t('rival')
@@ -343,6 +345,7 @@ export function App() {
         <div className="title">
           <h1>Hexaera</h1>
           <p>{t('Da fogueira à metrópole')}</p>
+          {playing !== null && <p className="nowplaying">● {t('{0} jogando agora', playing)}</p>}
           {screen === 'online' ? <Lobby matchId={matchId} joinId={joinId} phase={online.phase} error={online.error}
             onEnter={id => { setJoinId(null); setMatchId(id) }} onBack={() => { leave(); setScreen('menu') }} />
           : setup ? <SandboxSetup value={setup} onChange={setSetup} onBack={() => setSetup(null)}

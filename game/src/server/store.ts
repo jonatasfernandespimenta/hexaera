@@ -8,18 +8,27 @@ export type Store = {
   set(k: string, v: unknown): Promise<void>
   setnx(k: string, v: unknown): Promise<boolean>
   expire(k: string): Promise<void> // renova o prazo (TTL) da chave
+  presence(id: string, now: number): Promise<number> // marca a aba como ativa e conta as ativas em PRESENCE_MS
 }
+
+export const PRESENCE_MS = 90_000 // aba conta como ativa até 90 s após o último sinal (cliente avisa a cada 30 s)
 
 const copy = <T>(v: unknown) => JSON.parse(JSON.stringify(v)) as T // imita a serialização do Redis
 
 export function memoryStore(): Store {
   const m = new Map<string, unknown>()
+  const seen = new Map<string, number>()
   return {
     async get<T>(k: string) { return m.has(k) ? copy<T>(m.get(k)) : null },
     async mget(ks) { return ks.map(k => (m.has(k) ? copy(m.get(k)) : null)) },
     async set(k, v) { m.set(k, copy(v)) },
     async setnx(k, v) { if (m.has(k)) return false; m.set(k, copy(v)); return true },
     async expire() {}, // memória não expira
+    async presence(id, now) {
+      seen.set(id, now)
+      for (const [k, t] of seen) if (t < now - PRESENCE_MS) seen.delete(k)
+      return seen.size
+    },
   }
 }
 
@@ -41,6 +50,14 @@ export function redisStore(cfg: { url: string; token: string }): Store {
     set: async (k, v) => { await r.set(k, v, { ex: TTL }) },
     setnx: async (k, v) => (await r.set(k, v, { nx: true, ex: TTL })) === 'OK',
     expire: async k => { await r.expire(k, TTL) },
+    // ponytail: um sorted set global (id → último sinal); poda e conta no mesmo pipeline.
+    presence: async (id, now) => {
+      const p = r.pipeline()
+      p.zadd('presence', { score: now, member: id })
+      p.zremrangebyscore('presence', 0, now - PRESENCE_MS)
+      p.zcard('presence')
+      return (await p.exec<[number, number, number]>())[2]
+    },
   }
 }
 

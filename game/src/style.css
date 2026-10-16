@@ -396,3 +396,5 @@ button { font: inherit; cursor: pointer; }
   .sendrow { flex-direction: column; }
   .sendrow .field { flex-basis: auto; }
 }
+.title > p.nowplaying { margin: -18px 0 18px; font-size: 14px; opacity: 0.85; }
+.nowplaying::first-letter { color: #8ee36a; }
