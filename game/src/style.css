@@ -378,3 +378,21 @@ button { font: inherit; cursor: pointer; }
 .lobbywait { text-align: center !important; animation: pulse-text 1.4s ease-in-out infinite; }
 @keyframes pulse-text { 50% { opacity: 0.5; } }
 .pcard .lobbyerr { color: #a3261b; font-weight: bold; text-align: center; }
+
+/* partida online: rival e relógio na caixa do turno, painel militar */
+.rival { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; margin-top: 4px; font-size: 13px; max-width: 260px; }
+.rival .clock { padding: 0 5px; border: 2px solid #b4915c; background: #2a1a10d0; }
+.rival .clock.urgent { background: #8e2a1c; border-color: #ffb08a; animation: pulse-text 1s ease-in-out infinite; }
+.military .troops { text-align: center; font-size: 15px; }
+.military .opt .chip { color: #fff4dc; }
+.sendrow { display: flex; gap: 6px; align-items: stretch; margin: 6px 10px 0; }
+.sendrow .field { flex: 0 0 52px; text-align: center; }
+.sendrow .opt { flex: 1; width: auto; margin: 0; }
+.cargo { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 10px 0; }
+.cargo .chip { gap: 2px; }
+.cargo .field { flex: none; width: 44px; padding: 1px 3px; font-size: 12px; }
+@media (max-width: 820px), (max-height: 520px) {
+  .rival { font-size: 10px; max-width: 150px; margin-top: 2px; }
+  .sendrow { flex-direction: column; }
+  .sendrow .field { flex-basis: auto; }
+}

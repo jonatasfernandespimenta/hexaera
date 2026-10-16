@@ -1168,15 +1168,16 @@ function Engraving({ kind }: { kind: string }) {
 
 type Props = {
   state: State
-  buildMode: BuildingId | null
-  linkMode: Link | null
-  onHex: (h: Hex) => void
-  onEdge: (a: Hex, b: Hex) => void
+  buildMode?: BuildingId | null
+  linkMode?: Link | null
+  onHex?: (h: Hex) => void
+  onEdge?: (a: Hex, b: Hex) => void
   fp?: boolean
   onExitFp?: () => void
   demolishMode?: boolean
   railFrom?: Hex | null
   railTo?: Hex | null
+  ghost?: boolean // cidade do rival: só os tiles, sem câmera, luzes, mesa, hexes ocultos nem interação
 }
 
 // Pista: metade das florestas e montanhas ocultas mostra a silhueta.
@@ -1243,6 +1244,45 @@ function FirstPerson({ state, onExit }: { state: State; onExit: () => void }) {
   return <PointerLockControls ref={ref} onUnlock={onExit} />
 }
 
+// Faixa neutra entre as cidades: hexes cinza e baixos, sem interação. InstancedMesh = 1 draw call.
+export function NeutralStrip({ hexes }: { hexes: Hex[] }) {
+  const ref = useRef<InstancedMesh>(null)
+  useLayoutEffect(() => {
+    const m = ref.current!
+    const o = new Object3D()
+    hexes.forEach((h, i) => {
+      const [x, z] = toWorld(h)
+      o.position.set(x, H * 0.3, z)
+      o.updateMatrix()
+      m.setMatrixAt(i, o.matrix)
+    })
+    m.count = hexes.length
+    m.instanceMatrix.needsUpdate = true
+  }, [hexes])
+  return (
+    <instancedMesh key={hexes.length} ref={ref} args={[undefined, undefined, Math.max(1, hexes.length)]} receiveShadow>
+      <cylinderGeometry args={[R, R, H * 0.6, 6]} />
+      <meshStandardMaterial color="#6a6a66" flatShading />
+    </instancedMesh>
+  )
+}
+
+// Comitivas em trânsito: estandarte na reta entre os Centros, balançando de leve.
+const CONVOY_LOOK = { army: { c: '#b8322a', icon: '⚔️' }, aid: { c: '#2a5ad8', icon: '🛡️' }, cargo: { c: '#9a6a3a', icon: '📦' } }
+export function ConvoyMarker({ x, z, kind, n, mine }: { x: number; z: number; kind: keyof typeof CONVOY_LOOK; n: number; mine: boolean }) {
+  const g = useRef<Group>(null)
+  useFrame(({ clock }) => { if (g.current) g.current.position.y = H + Math.abs(Math.sin(clock.elapsedTime * 4 + x)) * 0.05 })
+  const { c, icon } = CONVOY_LOOK[kind]
+  return (
+    <group ref={g} position={[x, H, z]}>
+      <Vox p={[0, 0.1, 0]} s={[0.28, 0.2, 0.2]} c={kind === 'cargo' ? '#c8a26a' : '#5b3a1e'} />
+      <Vox p={[0.1, 0.4, 0]} s={[0.03, 0.6, 0.03]} c="#5b3a1e" />
+      <Vox p={[0.2, 0.6, 0]} s={[0.18, 0.16, 0.02]} c={c} />
+      <Html zIndexRange={[50, 0]} center position={[0, 0.95, 0]} className={`tip ${!mine && kind === 'army' ? 'warn' : ''}`}>{icon} {n}</Html>
+    </group>
+  )
+}
+
 // Em tela retrato (celular em pé) a câmera recua para o tabuleiro caber na largura.
 function FitCamera() {
   const { camera, size } = useThree()
@@ -1251,17 +1291,17 @@ function FitCamera() {
   return null
 }
 
-export function Board({ state, buildMode, linkMode, onHex, onEdge, fp, onExitFp, demolishMode, railFrom, railTo }: Props) {
+export function Board({ state, buildMode = null, linkMode = null, onHex, onEdge, fp, onExitFp, demolishMode, ghost, railFrom, railTo }: Props) {
   const [hover, setHover] = useState<string | null>(null)
   const [hoverEdge, setHoverEdge] = useState<string | null>(null)
   const seen = useRef(new Set(Object.keys(state.tiles)))
-  const hidden = hiddenHexes(state)
+  const hidden = ghost ? [] : hiddenHexes(state)
   const stop = stopped(state)
   const working = new Set(staffed(state))
   const links = linked(state)
   // Ferrovia: prévia da rota (origem escolhida → hex sob o mouse).
   const target = railTo ? key(railTo) : hover // celular: destino tocado; computador: hex sob o mouse
-  const preview = railFrom && target ? railPath(state, railFrom, parse(target)) : null
+  const preview = !ghost && railFrom && target ? railPath(state, railFrom, parse(target)) : null
   const onRoute = new Set(preview?.map(key))
   const fresh = preview ? railNew(state, preview).length : 0
   const railCost: Record<string, number> = { actions: fresh * BUILDINGS.railway.actions, ...Object.fromEntries(Object.entries(BUILDINGS.railway.cost).map(([r, v]) => [r, v * fresh])) }
@@ -1273,18 +1313,19 @@ export function Board({ state, buildMode, linkMode, onHex, onEdge, fp, onExitFp,
     for (const n of neighbors(parse(k)))
       if (state.tiles[key(n)] && key(n) > k) edges.push([parse(k), n])
 
-  const handlers = (h: Hex) => ({
+  const handlers = (h: Hex) => ghost ? {} : ({
     onPointerOver: (e: ThreeEvent<PointerEvent>) => {
       e.stopPropagation()
       if (hover !== key(h) && !state.tiles[key(h)]) sfx(exploreCost(state, h) <= state.actions ? 'peek' : 'peekOff')
       setHover(key(h))
     },
     onPointerOut: () => setHover(k => (k === key(h) ? null : k)),
-    onClick: (e: ThreeEvent<MouseEvent>) => { e.stopPropagation(); if (e.delta < 6) onHex(h) },
+    onClick: (e: ThreeEvent<MouseEvent>) => { e.stopPropagation(); if (e.delta < 6) onHex?.(h) },
   })
 
   return (
     <>
+      {!ghost && <>
       <FitCamera />
       {fp ? <FirstPerson state={state} onExit={onExitFp!} /> : <OrbitControls target={[0, 0, 0.6]} maxPolarAngle={1.1} minDistance={5} maxDistance={26} enablePan />}
       <ambientLight intensity={0.45} color="#ffe2c0" />
@@ -1296,6 +1337,7 @@ export function Board({ state, buildMode, linkMode, onHex, onEdge, fp, onExitFp,
       />
       <Table />
       <WaterClock />
+      </>}
 
       {Object.entries(state.tiles).map(([k, tile]) => {
         const h = parse(k)
@@ -1312,8 +1354,9 @@ export function Board({ state, buildMode, linkMode, onHex, onEdge, fp, onExitFp,
         const glow = wreck ? (hover === k ? '#ff6a4a' : '#c8402a') : valid ? '#7dff6a' : hover === k ? '#ffd890' : undefined
         const b = tile.building
         const wolves = state.invaders.filter(i => i.at === k)
-        const why = stop[k]
-        const half = b && !why && working.has(k) ? offGrid(state, k, links) : null
+        const why = ghost ? undefined : stop[k] // avisos de produção são só da própria cidade
+        const half = b && !why && !ghost && working.has(k) ? offGrid(state, k, links) : null
+        const raid = (state.raids ?? []).find(r => r.at === k) // exército do rival anunciado neste hex
         return (
           <group key={k} position={[x, 0, z]} {...handlers(h)}>
             <Piece top={TOP[tile.terrain]} side="#4a2e18" glow={glow} flip={isNew} lift={lift}>
@@ -1324,8 +1367,8 @@ export function Board({ state, buildMode, linkMode, onHex, onEdge, fp, onExitFp,
               {b && working.has(k) && Array.from({ length: BUILDINGS[b.id].workers }, (_, i) => <Worker key={i} i={i} />)}
               {wolves.map(w => <Invader key={w.id} hp={w.hp} kind={w.kind} />)}
             </Piece>
-            {state.warnings.includes(k) && (
-              <Html zIndexRange={[50, 0]} center position={[0, 1.2 + lift, 0]} className="tip warn"><Sprite name={THREAT_ART[state.era]} size={18} /> {t('ataque no próximo turno')}</Html>
+            {(state.warnings.includes(k) || raid) && (
+              <Html zIndexRange={[50, 0]} center position={[0, 1.2 + lift, 0]} className="tip warn"><Sprite name={THREAT_ART[raid?.kind ?? state.era]} size={18} /> {t('ataque no próximo turno')}</Html>
             )}
             {b && b.hp < BUILDINGS[b.id].hp && (
               <Html zIndexRange={[50, 0]} center position={[0.4, 0.9 + lift, 0]} className="tip bad">❤️{b.hp}</Html>
@@ -1376,7 +1419,7 @@ export function Board({ state, buildMode, linkMode, onHex, onEdge, fp, onExitFp,
           <group key={ek} position={[(ax + bx) / 2, y, (az + bz) / 2]} rotation={[0, -Math.atan2(bz - az, bx - ax), 0]}
             onPointerOver={e => { e.stopPropagation(); setHoverEdge(ek) }}
             onPointerOut={() => setHoverEdge(k => (k === ek ? null : k))}
-            onClick={e => { e.stopPropagation(); if (e.delta < 6) onEdge(a, b) }}>
+            onClick={e => { e.stopPropagation(); if (e.delta < 6) onEdge?.(a, b) }}>
             <mesh>
               <boxGeometry args={[0.7, 0.06, 0.34]} />
               <meshStandardMaterial color={on ? '#ffe08a' : '#7dff6a'} transparent opacity={on ? 0.9 : 0.45} emissive={on ? '#ffb000' : '#2a6a1a'} />

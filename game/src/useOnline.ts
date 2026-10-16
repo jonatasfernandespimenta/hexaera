@@ -1,6 +1,6 @@
 // Hook da partida online: carrega, consulta o servidor e fecha turnos. Uma requisição por vez por cliente:
 // escritas entram na fila `run`; a consulta periódica pula a vez se há algo pendente.
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Convoy } from './core/convoy'
 import { guard, type State } from './core/game'
 import { newMatchGame, normalize, settle } from './core/match'
@@ -20,6 +20,7 @@ export function useOnline(id: string | null) {
   const [state, setLocal] = useState<State | null>(null)
   const [rival, setRival] = useState<RivalView | null>(null)
   const [outbox, setOutbox] = useState<Convoy[]>([])
+  const [sent, setSent] = useState<Convoy[]>([]) // comitivas já enviadas ao servidor (as minhas)
   const [vote, setVote] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sendingNow, setSending] = useState(false) // "Fim do turno" em andamento: UI trava os controles
@@ -47,7 +48,7 @@ export function useOnline(id: string | null) {
   // Aplica uma leitura do servidor ao estado local; fecha o turno se os dois já enviaram.
   const apply = useCallback(async (v: View, creds: Creds) => {
     if (!id || cur.current.creds !== creds) return // trocou de partida no meio da requisição
-    setMeta(v.meta); setSeat(v.seat); setRival(v.rival)
+    setMeta(v.meta); setSeat(v.seat); setRival(v.rival); setSent(v.me.sent)
     cur.current.coop = v.meta.mode === 'coop'
     let local = cur.current.local!
     const settled = settle(local, v.rival?.state ?? null)
@@ -77,7 +78,7 @@ export function useOnline(id: string | null) {
     const creds = id ? getCreds(id) : null
     cur.current = { creds, coop: false, local: null, outbox: [], vote: false }
     setPhase('loading'); setError(null); setOutbox([]); setVote(false)
-    setMeta(null); setSeat(null); setRival(null); setLocal(null)
+    setMeta(null); setSeat(null); setRival(null); setLocal(null); setSent([])
     if (!id) return
     if (!creds) { setPhase('error'); setError('Você não está nesta partida.'); return }
     run(async () => {
@@ -141,5 +142,8 @@ export function useOnline(id: string | null) {
     return ok
   }, [id, run, refresh, apply])
 
-  return { meta, seat, phase, state, setState, rival, outbox, addConvoy, vote, setVote: setVoteCb, endTurn, sending: sendingNow, error }
+  // Minhas comitivas para o mapa: as do servidor e as que saem neste turno.
+  const mySent = useMemo(() => [...sent, ...outbox], [sent, outbox])
+
+  return { meta, seat, phase, state, setState, rival, outbox, mySent, addConvoy, vote, setVote: setVoteCb, endTurn, sending: sendingNow, error }
 }

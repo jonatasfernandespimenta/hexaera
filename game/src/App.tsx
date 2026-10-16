@@ -1,5 +1,5 @@
 import { Canvas } from '@react-three/fiber'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { BUILDINGS, CONTRACT_EVERY, CONTRACTS, EVENT_EVERY, ERAS, LINKS, RES, TERRAINS, type BuildingId, type Link, type Res } from './core/data'
 import { EVENT_BY_ID } from './core/events'
 import {
@@ -7,8 +7,11 @@ import {
   explore, happiness, pollutionDelta, run, terrainAt, housing, hunt, idle, income, maxActions, maxContracts, newGame, resolveEvent, shortfall, type State,
 } from './core/game'
 import { normalize } from './core/match'
-import { distance, key, type Hex } from './core/hex'
-import { Board } from './scene/Board'
+import { distance, key, toWorld, type Hex } from './core/hex'
+import { Board, ConvoyMarker, NeutralStrip } from './scene/Board'
+import { MilitaryCard, RivalStatus, useTurnClock } from './OnlineHud'
+import { convoyMarkers, endText, neutralStrip } from './onlineView'
+import type { Convoy } from './core/convoy'
 import { Minimap } from './Minimap'
 import { Sprite, type SpriteName } from './Sprite'
 import { Trade } from './Trade'
@@ -164,6 +167,16 @@ export function App() {
     if (lock) { setToast(lock); sfx('error'); return }
     try { setState(fn()); sfx(s) } catch (e) { setToast((e as Error).message); sfx('error') }
   }
+  // Comitiva: o estado (tropas/recursos saem) e a lista do turno mudam juntos; ambos passam pela trava.
+  const send = (fn: () => { state: State; convoy: Convoy }) => {
+    if (lock) { setToast(lock); sfx('error'); return false }
+    try {
+      const r = fn()
+      setState(r.state); online.addConvoy(r.convoy)
+      setToast(`Comitiva a caminho: chega no turno ${r.convoy.arrive + 1}`); sfx('card')
+      return true
+    } catch (e) { setToast((e as Error).message); sfx('error'); return false }
+  }
 
   // Sons do que o jogo faz sozinho: comparam o estado novo com o anterior.
   const prev = useRef(state)
@@ -200,6 +213,8 @@ export function App() {
     if (!matchId) return act(() => endTurn(state), 'turn')
     if (canEnd) online.endTurn().then(ok => sfx(ok ? 'turn' : 'error'))
   }
+  // Relógio da partida: ao zerar, envia o turno como o botão.
+  const clock = useTurnClock(matchId ? online.meta?.timer ?? 0 : 0, !!matchId && online.phase === 'playing' && !state.over, state.turn, finishTurn)
   // Erros da sessão online aparecem no aviso de sempre.
   useEffect(() => { if (online.error && screen === 'game') setToast(online.error) }, [online.error, screen])
   const goStep = (i: number, s = state) => {
@@ -267,8 +282,12 @@ export function App() {
   const inc = income(state)
   const power = run(state)
   const happy = happiness(state)
-  const goals = eraGoals(state)
+  // Online: match = contexto da partida; no coop as metas somam as duas cidades.
+  const match = matchId ? state.match : undefined
+  const coop = match?.mode === 'coop'
+  const goals = eraGoals(state, coop ? online.rival?.state : null)
   const last = state.era === ERAS.length - 1
+  const partnerVoted = !!online.rival?.votes.includes(state.turn)
   // Recursos da era atual sempre; os de eras passadas só quando há estoque ou movimento.
   const shown = (Object.keys(RES) as Res[]).filter(r => RES[r].era === state.era || state.res[r] || inc[r] || ['food', 'money', 'knowledge'].includes(r) && RES[r].era <= state.era)
   // Sandbox (e partida continuada após vencer) não tem fim: na última era não há o que concluir.
@@ -283,12 +302,19 @@ export function App() {
   const mid = (links.length + builds.length - 1) / 2
   const fan = (i: number) => ({ '--rot': `${(i - mid) * 2.2}deg`, '--drop': `${Math.abs(i - mid) ** 2 * 0.8}px` }) as React.CSSProperties
 
+  // Online: cidade do rival (fantasma) na posição do Centro dele, faixa neutra e comitivas na estrada.
+  const strip = useMemo(() => (match ? neutralStrip(state) : []), [match?.rival.q, match?.rival.r])
+  const rivalAt = match && toWorld(match.rival)
+  const markers = match ? convoyMarkers(match.rival, online.mySent, online.rival?.sent ?? [], state.turn) : []
   const canvas = (
       <Canvas shadows dpr={[1, 2]} camera={{ position: [0, 10.5, 7.2], fov: 38 }}>
         <color attach="background" args={['#1a0f08']} />
         <fog attach="fog" args={['#1a0f08', 18, 38]} />
         <Board state={state} buildMode={mode} linkMode={link} demolishMode={wreck} railFrom={railFrom} railTo={railTo} onHex={onHex} fp={fp} onExitFp={() => setFp(false)}
           onEdge={(a, b) => link && act(() => buildLink(state, a, b, link), 'link')} />
+        {match && <NeutralStrip hexes={strip} />}
+        {rivalAt && online.rival?.state && <group position={[rivalAt[0], 0, rivalAt[1]]}><Board ghost state={online.rival.state} /></group>}
+        {markers.map(m => <ConvoyMarker key={m.id} {...m} />)}
       </Canvas>
   )
 
@@ -359,6 +385,7 @@ export function App() {
             <div className="hp" title={t('Vida do Centro: se chegar a 0, a partida acaba')}>
               <Sprite name="heart" size={16} /> <i><b style={{ transform: `scaleX(${Math.max(0, state.centerHp) / centerMax(state)})` }} /></i> {state.centerHp}/{centerMax(state)}
             </div>
+            {match && <RivalStatus name={rivalName} mode={match.mode} rival={online.rival} turn={state.turn} clock={clock} />}
           </div>
         </div>
         <button className="endturn" onClick={finishTurn} disabled={!!state.over || !!state.event || !canEnd}>
@@ -380,9 +407,19 @@ export function App() {
                 {t(g.label)} <b>{Math.min(g.have, g.need)}/{g.need}</b>
               </div>
             ))}
-            <button className="opt green" disabled={!ready} onClick={() => act(() => advanceEra(state))}><b>{t(last ? 'Concluir civilização' : 'Avançar era')}</b></button>
+            {coop ? (
+              // Coop: a era avança quando os dois votam no mesmo turno (aplicado ao fechar o turno).
+              <button className="opt green" disabled={!ready || online.vote || !!lock} onClick={() => { online.setVote(true); sfx('card') }}>
+                <b>{online.vote ? 'Voto registrado ✔' : 'Votar para avançar'}</b>
+                <span>{rivalName} {partnerVoted ? 'votou' : 'ainda não votou'}</span>
+              </button>
+            ) : !(last && match) && ( // versus: na última era vence quem derrubar o outro Centro
+              <button className="opt green" disabled={!ready} onClick={() => act(() => advanceEra(state))}><b>{t(last ? 'Concluir civilização' : 'Avançar era')}</b></button>
+            )}
             <p className="muted">{t(nextEvent > 1 ? 'Próximo evento em {0} turnos' : 'Próximo evento em 1 turno', nextEvent)}</p>
         </div>
+
+        {match && <MilitaryCard state={state} mode={match.mode} outbox={online.outbox} act={fn => act(fn, 'build')} send={send} icon={r => <ResIcon r={r} />} />}
 
         {state.era > 0 && (
           <div className="pcard">
@@ -526,7 +563,17 @@ export function App() {
       {tut !== null && <Coach idx={tut} onNext={() => goStep(tut + 1)} onSkip={() => { endTutorial(); setScreen('menu') }}
         onFinish={() => { endTutorial(); play(newGame()) }} />}
 
-      {state.over && (
+      {state.over && match && (
+        <div className="over">
+          <div className="pcard big">
+            <header className={state.over === 'won' ? 'gold' : 'red'}>{state.over === 'won' ? 'Vitória' : 'Derrota'}</header>
+            <h2>{endText(match.mode, state.over, rivalName)}</h2>
+            <p>Partida online · {state.turn} turnos · Era {ERAS[state.era].name}.</p>
+            <button className="opt green" onClick={() => { setPanel(null); leave(); setScreen('menu') }}><b>Menu principal</b></button>
+          </div>
+        </div>
+      )}
+      {state.over && !match && (
         <div className="over">
           <div className="pcard big">
             <header className={state.over === 'won' ? 'gold' : 'red'}>{t(state.over === 'won' ? 'Vitória' : 'Derrota')}</header>
