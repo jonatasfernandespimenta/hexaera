@@ -6,6 +6,7 @@ import {
   abandon, accept, advanceEra, buildRail, canPlace, railPath, demolish, DEMOLISH_COST, SANDBOX_DEFAULT, type Sandbox, keepPlaying, terrainsOf, decline, DECLINE_COST, affordable, build, buildLink, canChoose, centerMax, contractReward, debt, deliver, endTurn, eraGoals,
   explore, happiness, pollutionDelta, run, terrainAt, housing, hunt, idle, income, maxActions, maxContracts, newGame, resolveEvent, shortfall, type State,
 } from './core/game'
+import { normalize } from './core/match'
 import { distance, key, type Hex } from './core/hex'
 import { Board } from './scene/Board'
 import { Minimap } from './Minimap'
@@ -62,7 +63,7 @@ const store = {
   get: (k: string) => { try { return localStorage.getItem(k) } catch { return null } },
   set: (k: string, v: string) => { try { localStorage.setItem(k, v) } catch { /* sem storage: só não salva */ } },
 }
-const loadSave = (): State | null => { try { return JSON.parse(store.get(SAVE) ?? 'null') } catch { return null } }
+const loadSave = (): State | null => { try { const s = JSON.parse(store.get(SAVE) ?? 'null'); return s && normalize(s) } catch { return null } }
 
 // Opções do Sandbox: cada linha é um seletor de botões.
 const SANDBOX_ROWS: { key: keyof Sandbox; label: string; opts: [Sandbox[keyof Sandbox], string][] }[] = [

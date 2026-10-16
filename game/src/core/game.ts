@@ -6,6 +6,7 @@ import {
 import { EVENT_BY_ID, EVENTS, type Effect, type EventOption } from './events'
 import { distance, key, neighbors, parse, type Hex } from './hex'
 import { t as tr } from '../i18n'
+import { neutral, type MatchInfo } from './match'
 
 export type Building = { id: BuildingId; turnsLeft: number; hp: number; up?: boolean } // up: melhoria sobre a construção anterior
 export type Tile = { terrain: Terrain | 'center'; building?: Building }
@@ -40,7 +41,11 @@ export type State = {
   contracts: Contract[] // contratos aceitos
   rep: number // ⭐ reputação
   pollution: number // ☁️ 0–100
-  opts?: Sandbox // só no modo Sandbox
+  opts?: Sandbox // Sandbox ou partida online
+  match?: MatchInfo // só em partida online
+  troops: number // tropas em casa (Tasks 3 e 4)
+  away: { n: number; back: number }[] // tropas em missão e turno de retorno
+  raids: { at: string; kind: number; n: number }[] // ataques anunciados
 }
 
 // Sandbox (ver vault: Sandbox): sem objetivo obrigatório; o jogador ajusta o mundo.
@@ -112,7 +117,7 @@ export function hiddenHexes(s: State): Hex[] {
   const out = new Map<string, Hex>()
   for (const k of Object.keys(s.tiles))
     for (const n of neighbors(parse(k)))
-      if (!s.tiles[key(n)]) out.set(key(n), n)
+      if (!s.tiles[key(n)] && !neutral(s, n)) out.set(key(n), n)
   return [...out.values()]
 }
 
@@ -357,6 +362,7 @@ export function newGame(seed = Math.floor(Math.random() * 1e6), opts?: Sandbox):
     invaders: [], warnings: [], mods: [], luxury: false, flags: [], deck: [], event: null,
     log: [tr('A tribo acendeu a primeira fogueira.')], nextId: 1, over: null,
     links: {}, prices: {}, traded: 0, offers: [], contracts: [], rep: 0, pollution: 0,
+    troops: 0, away: [], raids: [],
   }
   for (const [r, d] of Object.entries(RES)) if (d.price) s.prices[r as Res] = d.price
   s.deck = shuffle(s, EVENTS.map(e => e.id))
@@ -383,6 +389,7 @@ export function explore(prev: State, h: Hex): State {
   guard(prev)
   if (prev.tiles[key(h)]) throw new Error(tr('Já revelado.'))
   if (!neighbors(h).some(n => prev.tiles[key(n)])) throw new Error(tr('Precisa ser vizinho do seu território.'))
+  if (neutral(prev, h)) throw new Error('Fronteira neutra.')
   const cost = exploreCost(prev, h)
   if (cost > prev.actions) throw new Error(tr('Faltam ações: custa {0} ✋.', cost))
   const s = structuredClone(prev)
@@ -513,6 +520,7 @@ function eligible(s: State, id: string) {
   if (c.needs?.flag && !s.flags.includes(c.needs.flag)) return false
   if (c.needs?.minFood && s.res.food < c.needs.minFood) return false
   if (c.needs?.minPollution && s.pollution < c.needs.minPollution) return false
+  if (s.match?.mode === 'versus' && c.options.some(o => o.effect.warn || o.effect.destroy)) return false
   return true
 }
 
