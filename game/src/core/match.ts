@@ -1,5 +1,6 @@
 // Partida online: contexto do assento, fronteira neutra e ritmo (ver plano multiplayer).
 import { distance, type Hex } from './hex'
+import { ERAS } from './data'
 import { newGame, type State } from './game'
 
 export type Mode = 'coop' | 'versus'
@@ -20,4 +21,14 @@ export const neutral = (s: State, h: Hex) => !!s.match && distance(h) >= distanc
 // Saves antigos: preenche os campos que não existiam.
 export function normalize(s: State): State {
   return { ...s, troops: s.troops ?? 0, away: s.away ?? [], raids: s.raids ?? [] }
+}
+
+// Aplica o resultado do rival ao próprio estado (chamado após cada turno fechado). Quem já tem resultado o mantém.
+export function settle(s: State, rival: State | null): State {
+  if (s.over || !s.match || !rival?.over) return s
+  const { mode } = s.match
+  if (mode === 'versus' && rival.over === 'lost') return { ...s, over: 'won' }
+  if (mode === 'coop' && rival.over === 'lost') return { ...s, over: 'lost' }
+  if (mode === 'coop' && rival.over === 'won' && s.era === ERAS.length - 1) return { ...s, over: 'won' }
+  return s
 }

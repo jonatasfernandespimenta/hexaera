@@ -888,13 +888,16 @@ export function endTurn(prev: State): State {
 
 // ---------- era ----------
 
-export function eraGoals(s: State) {
+// No coop as metas são da dupla: need ×2 e have soma as duas cidades (partner null = só a própria).
+export function eraGoals(s: State, partner?: State | null) {
   const g = ERAS[s.era].goal
-  const pace = s.opts?.pace ?? 1
+  const coop = s.match?.mode === 'coop'
+  const pace = (s.opts?.pace ?? 1) * (coop ? 2 : 1)
+  const p = coop ? partner : null
   return [
-    { kind: 'knowledge' as const, label: 'Conhecimento', have: s.res.knowledge, need: Math.round(g.knowledge * pace) },
-    { kind: 'pop' as const, label: 'População', have: s.pop, need: Math.round(g.pop * pace) },
-    { kind: g.building, label: BUILDINGS[g.building].name, have: count(s, g.building), need: 1 },
+    { kind: 'knowledge' as const, label: 'Conhecimento', have: s.res.knowledge + (p?.res.knowledge ?? 0), need: Math.round(g.knowledge * pace) },
+    { kind: 'pop' as const, label: 'População', have: s.pop + (p?.pop ?? 0), need: Math.round(g.pop * pace) },
+    { kind: g.building, label: BUILDINGS[g.building].name, have: count(s, g.building) + (p ? count(p, g.building) : 0), need: 1 },
   ]
 }
 
@@ -905,11 +908,13 @@ export function keepPlaying(prev: State): State {
   return { ...prev, over: null, flags: [...prev.flags, 'sandbox'] }
 }
 
-export function advanceEra(prev: State): State {
+// force: a dupla do coop já votou (metas validadas por quem conhece os dois estados).
+export function advanceEra(prev: State, force = false): State {
   guard(prev)
-  if (!eraGoals(prev).every(g => g.have >= g.need)) throw new Error(tr('Requisitos da era incompletos.'))
+  if (!force && !eraGoals(prev).every(g => g.have >= g.need)) throw new Error(tr('Requisitos da era incompletos.'))
   const s = structuredClone(prev)
   if (s.era === ERAS.length - 1) {
+    if (s.match?.mode === 'versus') throw new Error('No versus, vence quem derrubar o outro Centro.')
     if (s.flags.includes('sandbox')) throw new Error(tr('Civilização já concluída.'))
     return { ...s, over: 'won' }
   }

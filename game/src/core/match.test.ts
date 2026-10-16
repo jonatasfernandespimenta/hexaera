@@ -1,8 +1,8 @@
 import { expect, test } from 'vitest'
 import { ERAS, TROOP_COST } from './data'
 import { EVENT_BY_ID } from './events'
-import { canChoose, eraGoals, endTurn, hiddenHexes, newGame, recruit, resolveEvent } from './game'
-import { neutral, newMatchGame, normalize } from './match'
+import { advanceEra, canChoose, eraGoals, endTurn, hiddenHexes, newGame, recruit, resolveEvent } from './game'
+import { neutral, newMatchGame, normalize, settle } from './match'
 
 test('fronteira neutra: assento 0 não explora rumo ao rival', () => {
   const s = newMatchGame(5, 'versus', 0, true)
@@ -36,7 +36,39 @@ test('versus: sem invasões aleatórias nem cartas de ataque/destruição', () =
 test('ritmo rápido reduz metas', () => {
   expect(eraGoals(newMatchGame(5, 'versus', 0, true))[0].need).toBeLessThan(ERAS[0].goal.knowledge)
 })
-test.todo('coop normal mantém metas (Task 5: need === goal.knowledge * 2)')
+test('coop normal: meta ×2', () => {
+  expect(eraGoals(newMatchGame(5, 'coop', 0, false))[0].need).toBe(ERAS[0].goal.knowledge * 2)
+})
+test('coop soma metas com o parceiro; null conta só a própria', () => {
+  const a = newMatchGame(5, 'coop', 0, false), b = newMatchGame(5, 'coop', 1, false)
+  a.res.knowledge = 10; b.res.knowledge = 7; a.pop = 3; b.pop = 2
+  const g = eraGoals(a, b)
+  expect([g[0].have, g[1].have]).toEqual([17, 5])
+  expect([eraGoals(a, null)[0].have, eraGoals(a)[1].have]).toEqual([10, 3])
+  const v = newMatchGame(5, 'versus', 0, false)
+  expect(eraGoals(v, b)[0].have).toBe(v.res.knowledge)
+})
+test('force avança sem metas; sem force lança', () => {
+  const s = newMatchGame(5, 'coop', 0, false)
+  expect(() => advanceEra(s)).toThrow('incompletos')
+  expect(advanceEra(s, true).era).toBe(1)
+})
+test('versus: rival perdeu -> venci; perdi antes -> mantém', () => {
+  const a = newMatchGame(5, 'versus', 0, false), b = { ...newMatchGame(5, 'versus', 1, false), over: 'lost' as const }
+  expect(settle(a, b).over).toBe('won')
+  expect(settle({ ...a, over: 'lost' }, b).over).toBe('lost')
+  expect(settle(a, null).over).toBeNull()
+})
+test('coop: rival perdeu -> perdi; rival venceu só vale na última era', () => {
+  const a = newMatchGame(5, 'coop', 0, false), b = newMatchGame(5, 'coop', 1, false)
+  expect(settle(a, { ...b, over: 'lost' }).over).toBe('lost')
+  expect(settle(a, { ...b, over: 'won' }).over).toBeNull()
+  expect(settle({ ...a, era: ERAS.length - 1 }, { ...b, over: 'won' }).over).toBe('won')
+})
+test('versus: Marco Final não vence', () => {
+  const s = newMatchGame(5, 'versus', 0, false); s.era = ERAS.length - 1
+  expect(() => advanceEra(s, true)).toThrow('No versus')
+})
 test('save antigo sem campos novos é normalizado', () => {
   const old: any = newGame(1); delete old.troops; delete old.away; delete old.raids
   const s = normalize(old)
