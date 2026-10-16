@@ -88,7 +88,7 @@ function shuffle<T>(s: State, xs: T[]) {
 
 const pick = <T>(s: State, xs: T[]) => xs[Math.floor(roll(s) * xs.length)]
 
-function log(s: State, msg: string) {
+export function log(s: State, msg: string) {
   s.log = [msg, ...s.log].slice(0, 6)
 }
 
@@ -244,7 +244,7 @@ const sumOf = (s: State, f: (d: (typeof BUILDINGS)[BuildingId]) => number | unde
   staffed(s).reduce((n, k) => n + (f(BUILDINGS[s.tiles[k].building!.id]) ?? 0), 0)
 
 export function idle(s: State) {
-  return s.pop - sumOf(s, d => d.workers)
+  return s.pop - sumOf(s, d => d.workers) - (s.away ?? []).reduce((n, a) => n + a.n, 0)
 }
 
 // ✋ base + 👤 ociosos (valem mais com a era: ferramentas, eletricidade) + bônus de construções.
@@ -380,7 +380,7 @@ export function newGame(seed = Math.floor(Math.random() * 1e6), opts?: Sandbox):
   return s
 }
 
-function guard(s: State) {
+export function guard(s: State) {
   if (s.over) throw new Error(tr('A partida acabou.'))
   if (s.event) throw new Error(tr('Resolva o evento primeiro.'))
 }
@@ -869,6 +869,12 @@ export function endTurn(prev: State): State {
     log(s, tr('{0} {1} chegaram!', th.icon, th.name))
   }
   s.warnings = []
+  for (const r of s.raids) {
+    const t = THREATS[r.kind]
+    for (let i = 0; i < r.n; i++) s.invaders.push({ id: s.nextId++, at: r.at, hp: t.hp, atk: t.atk, kind: r.kind })
+  }
+  s.raids = []
+  s.away = s.away.filter(a => a.back > s.turn)
   if (s.turn >= THREAT_FROM_TURN && roll(s) < THREAT_CHANCE * (s.opts?.threats ?? 1)) warn(s)
   if (s.turn % PRICE_EVERY === 0 && s.opts?.market !== 'estavel') drift(s)
   contractsTick(s)
