@@ -137,3 +137,6 @@ Layout em `style.css` (`@media (max-width: 820px), (max-height: 520px)`): barra 
 - `atlas7.png`: Fazenda senhorial, Fazenda mecanizada, Poço de petróleo, Termelétrica, Hidrelétrica, Fábrica de eletrônicos, Montadora, Prédio residencial, Hospital, Estádio, Torreta, Estufa, Rodovia.
 - `atlas8.png`: ilustrações de evento (seca, festa, invasão/incêndio, tempestade, poluição/protesto, comércio) e ícones das 7 ameaças (aparecem no aviso de ataque e sobre o invasor).
 Com isso **nenhuma carta ou recurso usa emoji**. Emoji ainda aparece só em textos corridos (descrições, registro, rótulos do tabuleiro).
+
+## Primeira pessoa (computador)
+Tecla **P** entra/sai. WASD ou setas andam, Shift corre, mouse olha (pointer lock), Esc sai. Altura de um meeple, acompanhando o relevo do hex mais próximo; fora do tabuleiro anda na mesa. A interface some e fica só a mira e a dica de controles; cliques não constroem. Ao sair, a câmera volta à posição anterior.

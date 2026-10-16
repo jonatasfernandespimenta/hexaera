@@ -107,6 +107,7 @@ export function App() {
   const [tut, setTut] = useState<number | null>(null) // passo atual do tutorial
   const tutStart = useRef(state) // estado no início do passo, para detectar a ação pedida
   const [deck, setDeck] = useState(false) // celular: mão aberta
+  const [fp, setFp] = useState(false) // primeira pessoa
   const pickBuilding = (id: BuildingId | null) => { setMode(id); setLink(null); setDeck(false) }
   const pickLink = (l: Link | null) => { setLink(l); setMode(null); setDeck(false) }
   const toggle = (p: Panel) => setPanel(panel === p ? null : p)
@@ -180,14 +181,15 @@ export function App() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') { if (mode || link) sfx('uncard'); setMode(null); setLink(null); setPanel(null) }
-      if (e.key === 'Enter' && screen === 'game' && !state.over && !state.event) act(() => endTurn(state), 'turn')
+      if (e.key === 'Enter' && screen === 'game' && !fp && !state.over && !state.event) act(() => endTurn(state), 'turn')
+      if (e.code === 'KeyP' && screen === 'game' && !MOBILE()) { setFp(v => !v); setMode(null); setLink(null); setPanel(null) }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   })
 
   const onHex = (h: Hex) => {
-    if (state.over) return
+    if (state.over || fp) return
     if (!state.tiles[key(h)]) return act(() => explore(state, h), 'explore')
     if (mode) {
       act(() => build(state, h, mode), 'build')
@@ -218,9 +220,18 @@ export function App() {
       <Canvas shadows dpr={[1, 2]} camera={{ position: [0, 10.5, 7.2], fov: 38 }}>
         <color attach="background" args={['#1a0f08']} />
         <fog attach="fog" args={['#1a0f08', 18, 38]} />
-        <Board state={state} buildMode={mode} linkMode={link} onHex={onHex}
+        <Board state={state} buildMode={mode} linkMode={link} onHex={onHex} fp={fp} onExitFp={() => setFp(false)}
           onEdge={(a, b) => link && act(() => buildLink(state, a, b, link), 'link')} />
       </Canvas>
+  )
+
+  // Primeira pessoa (P, só no computador): só o tabuleiro e a dica de controles.
+  if (fp) return (
+    <>
+      {canvas}
+      <div className="fphint frame">WASD andar · Shift correr · mouse olhar · Esc ou P sair</div>
+      <div className="crosshair" />
+    </>
   )
 
   if (screen === 'menu') {
@@ -465,7 +476,7 @@ export function App() {
 
 function Stat({ icon, value, delta, title, cls = '' }: { icon: React.ReactNode; value: number | string; delta?: number; title: string; cls?: string }) {
   return (
-    <span className="stat" title={title}>
+    <span className="stat" data-tip={title}>
       <i>{icon}</i>
       <span>
         <b className={cls}>{value}</b>

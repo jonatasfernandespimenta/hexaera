@@ -1,7 +1,7 @@
-import { Html, OrbitControls } from '@react-three/drei'
+import { Html, OrbitControls, PointerLockControls } from '@react-three/drei'
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
-import { useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Color, Object3D, ShaderMaterial, type Group, type MeshStandardMaterial, type InstancedMesh, type PointLight } from 'three'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Color, Object3D, ShaderMaterial, Vector3, type Group, type MeshStandardMaterial, type InstancedMesh, type PointLight } from 'three'
 import { BUILDINGS, HUNT_COST, LINKS, RES, THREATS, TERRAINS, type BuildingId, type Link, type Res } from '../core/data'
 import { sfx } from '../sfx'
 import { terrainAt, linked, offGrid, canLink, canPlace, centerMax, edgeKey, exploreCost, hiddenHexes, linkCost, staffed, stopped, type State, type Tile } from '../core/game'
@@ -1113,6 +1113,8 @@ type Props = {
   linkMode: Link | null
   onHex: (h: Hex) => void
   onEdge: (a: Hex, b: Hex) => void
+  fp?: boolean
+  onExitFp?: () => void
 }
 
 // Pista: metade das florestas e montanhas ocultas mostra a silhueta.
@@ -1126,6 +1128,59 @@ const STOP_SHORT: Record<string, string> = {
   'sem trabalhadores': '⛔ sem 👤', 'sem energia': '⛔ sem ⚡', 'metade sem energia': '½ sem ⚡',
 }
 
+// Primeira pessoa: anda pelo tabuleiro na altura de um meeple. WASD/setas, Shift corre, mouse olha (pointer lock).
+// A altura acompanha o relevo do hex mais próximo; fora do tabuleiro, a mesa. Ao sair, a câmera volta para onde estava.
+function FirstPerson({ state, onExit }: { state: State; onExit: () => void }) {
+  const ref = useRef<any>(null)
+  const { camera } = useThree()
+  const keys = useRef(new Set<string>())
+  const cam = camera as import('three').PerspectiveCamera
+  useEffect(() => {
+    const saved = cam.position.clone(), savedQ = cam.quaternion.clone(), savedFov = cam.fov
+    cam.position.set(0, H + 0.3, 1.6)
+    cam.lookAt(0, H + 0.25, 0)
+    cam.fov = 70
+    cam.updateProjectionMatrix()
+    const down = (e: KeyboardEvent) => keys.current.add(e.code)
+    const up = (e: KeyboardEvent) => keys.current.delete(e.code)
+    addEventListener('keydown', down)
+    addEventListener('keyup', up)
+    ref.current?.lock()
+    return () => {
+      removeEventListener('keydown', down)
+      removeEventListener('keyup', up)
+      ref.current?.unlock()
+      cam.position.copy(saved)
+      cam.quaternion.copy(savedQ)
+      cam.fov = savedFov
+      cam.updateProjectionMatrix()
+    }
+  }, [cam])
+  useFrame((_, dt) => {
+    const k = keys.current
+    const on = (...c: string[]) => (c.some(x => k.has(x)) ? 1 : 0)
+    const fwd = on('KeyW', 'ArrowUp') - on('KeyS', 'ArrowDown'), side = on('KeyD', 'ArrowRight') - on('KeyA', 'ArrowLeft')
+    if (fwd || side) {
+      const dir = new Vector3()
+      cam.getWorldDirection(dir)
+      dir.y = 0
+      dir.normalize()
+      const right = new Vector3().crossVectors(dir, cam.up)
+      const sp = (on('ShiftLeft', 'ShiftRight') ? 3 : 1.3) * dt
+      cam.position.addScaledVector(dir, fwd * sp).addScaledVector(right, side * sp)
+    }
+    let best = Infinity, ground = 0
+    for (const [kk, t] of Object.entries(state.tiles)) {
+      const [x, z] = toWorld(parse(kk))
+      const d = (x - cam.position.x) ** 2 + (z - cam.position.z) ** 2
+      if (d < best) { best = d; ground = H + liftOf(kk, t.terrain) }
+    }
+    if (best > R * R) ground = 0 // fora do tabuleiro: na mesa
+    cam.position.y += (ground + 0.22 - cam.position.y) * Math.min(1, dt * 10)
+  })
+  return <PointerLockControls ref={ref} onUnlock={onExit} />
+}
+
 // Em tela retrato (celular em pé) a câmera recua para o tabuleiro caber na largura.
 function FitCamera() {
   const { camera, size } = useThree()
@@ -1134,7 +1189,7 @@ function FitCamera() {
   return null
 }
 
-export function Board({ state, buildMode, linkMode, onHex, onEdge }: Props) {
+export function Board({ state, buildMode, linkMode, onHex, onEdge, fp, onExitFp }: Props) {
   const [hover, setHover] = useState<string | null>(null)
   const [hoverEdge, setHoverEdge] = useState<string | null>(null)
   const seen = useRef(new Set(Object.keys(state.tiles)))
@@ -1163,7 +1218,7 @@ export function Board({ state, buildMode, linkMode, onHex, onEdge }: Props) {
   return (
     <>
       <FitCamera />
-      <OrbitControls target={[0, 0, 0.6]} maxPolarAngle={1.1} minDistance={5} maxDistance={26} enablePan />
+      {fp ? <FirstPerson state={state} onExit={onExitFp!} /> : <OrbitControls target={[0, 0, 0.6]} maxPolarAngle={1.1} minDistance={5} maxDistance={26} enablePan />}
       <ambientLight intensity={0.45} color="#ffe2c0" />
       <hemisphereLight args={['#ffe6c0', '#3a2414', 0.7]} />
       <directionalLight
