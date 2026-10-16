@@ -39,7 +39,18 @@ export type State = {
   contracts: Contract[] // contratos aceitos
   rep: number // ⭐ reputação
   pollution: number // ☁️ 0–100
+  opts?: Sandbox // só no modo Sandbox
 }
+
+// Sandbox (ver vault: Sandbox): sem objetivo obrigatório; o jogador ajusta o mundo.
+export type Sandbox = {
+  threats: number // × chance de invasão (0 = desligadas)
+  abundance: number // × produção
+  pace: number // × metas das eras (📚 e 👤)
+  market: 'volatil' | 'estavel' | 'off'
+  era: number // era inicial
+}
+export const SANDBOX_DEFAULT: Sandbox = { threats: 1, abundance: 1, pace: 1, market: 'volatil', era: 0 }
 
 // ---------- aleatoriedade determinística (seed) ----------
 
@@ -231,7 +242,7 @@ export const centerMax = (s: State) => CENTER_HP + CENTER_HP_PER_ERA * s.era
 
 export const huntDamage = (s: State) => 1 + sumOf(s, d => d.huntBonus)
 
-export const tradeLimit = (s: State) => sumOf(s, d => d.tradeVolume)
+export const tradeLimit = (s: State) => (s.opts?.market === 'off' ? 0 : sumOf(s, d => d.tradeVolume))
 
 const modProduct = (s: State, f: 'foodMult' | 'eatMult') => s.mods.reduce((m, x) => m * (x[f] ?? 1), 1)
 
@@ -251,7 +262,7 @@ export const debt = (s: State) => Object.values(s.res).reduce((n, v) => n + Math
 // Faixas de felicidade (ver vault: População e Felicidade).
 export function prodMult(s: State) {
   const h = happiness(s)
-  return h < 15 ? 0.5 : h < 30 ? 0.75 : 1
+  return (h < 15 ? 0.5 : h < 30 ? 0.75 : 1) * (s.opts?.abundance ?? 1)
 }
 
 // Imposto por moradia ocupada, a partir do Bronze, modulado pela felicidade (ver vault: Recursos).
@@ -330,7 +341,7 @@ export function income(s: State) {
 
 // ---------- jogo ----------
 
-export function newGame(seed = Math.floor(Math.random() * 1e6)): State {
+export function newGame(seed = Math.floor(Math.random() * 1e6), opts?: Sandbox): State {
   const s: State = {
     seed, rng: seed, turn: 1, era: 0, tiles: { '0,0': { terrain: 'center' } },
     pop: 3, res: { ...zero(), food: 5, wood: 3 }, actions: 0, centerHp: CENTER_HP,
@@ -340,6 +351,16 @@ export function newGame(seed = Math.floor(Math.random() * 1e6)): State {
   }
   for (const [r, d] of Object.entries(RES)) if (d.price) s.prices[r as Res] = d.price
   s.deck = shuffle(s, EVENTS.map(e => e.id))
+  if (opts) {
+    // Começar numa era avançada: estoque generoso dos recursos já disponíveis, Centro à altura da era.
+    s.opts = opts
+    s.flags.push('sandbox')
+    s.era = opts.era
+    for (const [r, d] of Object.entries(RES) as [Res, (typeof RES)[Res]][]) if (d.era <= opts.era) s.res[r] += opts.era ? 30 : 0
+    s.res.food += opts.era * 20
+    s.res.money += opts.era * 300
+    s.centerHp = centerMax(s)
+  }
   s.actions = maxActions(s)
   return s
 }
@@ -749,8 +770,8 @@ export function endTurn(prev: State): State {
     log(s, `${th.icon} ${th.name} chegaram!`)
   }
   s.warnings = []
-  if (s.turn >= THREAT_FROM_TURN && roll(s) < THREAT_CHANCE) warn(s)
-  if (s.turn % PRICE_EVERY === 0) drift(s)
+  if (s.turn >= THREAT_FROM_TURN && roll(s) < THREAT_CHANCE * (s.opts?.threats ?? 1)) warn(s)
+  if (s.turn % PRICE_EVERY === 0 && s.opts?.market !== 'estavel') drift(s)
   contractsTick(s)
   if (s.turn % EVENT_EVERY === 0) s.event = draw(s)
 
@@ -764,9 +785,10 @@ export function endTurn(prev: State): State {
 
 export function eraGoals(s: State) {
   const g = ERAS[s.era].goal
+  const pace = s.opts?.pace ?? 1
   return [
-    { kind: 'knowledge' as const, label: 'Conhecimento', have: s.res.knowledge, need: g.knowledge },
-    { kind: 'pop' as const, label: 'População', have: s.pop, need: g.pop },
+    { kind: 'knowledge' as const, label: 'Conhecimento', have: s.res.knowledge, need: Math.round(g.knowledge * pace) },
+    { kind: 'pop' as const, label: 'População', have: s.pop, need: Math.round(g.pop * pace) },
     { kind: g.building, label: BUILDINGS[g.building].name, have: count(s, g.building), need: 1 },
   ]
 }

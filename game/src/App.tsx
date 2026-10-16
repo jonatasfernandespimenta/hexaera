@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { BUILDINGS, CONTRACT_EVERY, CONTRACTS, EVENT_EVERY, ERAS, LINKS, NEXT_ERA_NAME, RES, TERRAINS, type BuildingId, type Link, type Res } from './core/data'
 import { EVENT_BY_ID } from './core/events'
 import {
-  abandon, accept, advanceEra, keepPlaying, terrainsOf, decline, DECLINE_COST, affordable, build, buildLink, canChoose, centerMax, contractReward, debt, deliver, endTurn, eraGoals,
+  abandon, accept, advanceEra, SANDBOX_DEFAULT, type Sandbox, keepPlaying, terrainsOf, decline, DECLINE_COST, affordable, build, buildLink, canChoose, centerMax, contractReward, debt, deliver, endTurn, eraGoals,
   explore, happiness, pollutionDelta, run, terrainAt, housing, hunt, idle, income, maxActions, maxContracts, newGame, resolveEvent, shortfall, type State,
 } from './core/game'
 import { distance, key, type Hex } from './core/hex'
@@ -58,6 +58,35 @@ const store = {
 }
 const loadSave = (): State | null => { try { return JSON.parse(store.get(SAVE) ?? 'null') } catch { return null } }
 
+// Opções do Sandbox: cada linha é um seletor de botões.
+const SANDBOX_ROWS: { key: keyof Sandbox; label: string; opts: [Sandbox[keyof Sandbox], string][] }[] = [
+  { key: 'threats', label: 'Invasões', opts: [[0, 'Nenhuma'], [0.5, 'Raras'], [1, 'Normais'], [2, 'Frequentes']] },
+  { key: 'abundance', label: 'Abundância', opts: [[0.75, 'Escassa'], [1, 'Normal'], [1.5, 'Farta']] },
+  { key: 'pace', label: 'Ritmo das eras', opts: [[0.5, 'Rápido'], [1, 'Normal'], [1.5, 'Lento']] },
+  { key: 'market', label: 'Mercado', opts: [['volatil', 'Volátil'], ['estavel', 'Estável'], ['off', 'Desligado']] },
+  { key: 'era', label: 'Era inicial', opts: ERAS.map((e, i) => [i, e.name.replace(/^do /, '')] as [number, string]) },
+]
+function SandboxSetup({ value, onChange, onBack, onStart }: { value: Sandbox; onChange: (v: Sandbox) => void; onBack: () => void; onStart: () => void }) {
+  return (
+    <div className="pcard menu setup">
+      <header className="gold">Sandbox</header>
+      {SANDBOX_ROWS.map(row => (
+        <div key={row.key} className="setrow">
+          <small>{row.label}</small>
+          <div>
+            {row.opts.map(([v, l]) => (
+              <button key={String(v)} className={value[row.key] === v ? 'sel' : ''}
+                onClick={() => { sfx('click'); onChange({ ...value, [row.key]: v }) }}>{l}</button>
+            ))}
+          </div>
+        </div>
+      ))}
+      <button className="opt green" onClick={onStart}><b>Começar</b><span>substitui o jogo salvo</span></button>
+      <button className="opt dark" onClick={onBack}><b>Voltar</b></button>
+    </div>
+  )
+}
+
 export function App() {
   const [state, setState] = useState<State>(() => loadSave() ?? newGame())
   const [mode, setMode] = useState<BuildingId | null>(null)
@@ -69,6 +98,7 @@ export function App() {
   const [news, setNews] = useState<string | null>(null)
   const [screen, setScreen] = useState<'menu' | 'game'>('menu')
   const [sideOpen, setSideOpen] = useState(false)
+  const [setup, setSetup] = useState<Sandbox | null>(null) // tela de opções do Sandbox
   const [tut, setTut] = useState<number | null>(null) // passo atual do tutorial
   const tutStart = useRef(state) // estado no início do passo, para detectar a ação pedida
   const [deck, setDeck] = useState(false) // celular: mão aberta
@@ -164,8 +194,11 @@ export function App() {
   const power = run(state)
   const happy = happiness(state)
   const goals = eraGoals(state)
-  const ready = goals.every(g => g.have >= g.need) && !state.flags.includes('sandbox')
   const last = state.era === ERAS.length - 1
+  // Recursos da era atual sempre; os de eras passadas só quando há estoque ou movimento.
+  const shown = (Object.keys(RES) as Res[]).filter(r => RES[r].era === state.era || state.res[r] || inc[r] || ['food', 'money', 'knowledge'].includes(r) && RES[r].era <= state.era)
+  // Sandbox (e partida continuada após vencer) não tem fim: na última era não há o que concluir.
+  const ready = goals.every(g => g.have >= g.need) && !(last && state.flags.includes('sandbox'))
   const card = state.event ? EVENT_BY_ID[state.event] : null
   const contract = state.contracts[0] ?? state.offers[0]
   const nextEvent = EVENT_EVERY - (state.turn % EVENT_EVERY)
@@ -195,12 +228,14 @@ export function App() {
         <div className="title">
           <h1>Hexaera</h1>
           <p>Da fogueira à metrópole</p>
-          <div className="pcard menu">
+          {setup ? <SandboxSetup value={setup} onChange={setSetup} onBack={() => setSetup(null)}
+            onStart={() => { play(newGame(undefined, setup)); setSetup(null) }} /> : <div className="pcard menu">
             {save && <button className="opt green" onClick={() => play(save)}><b>Continuar</b><span>Era {ERAS[save.era].name} · turno {save.turn}</span></button>}
             <button className={`opt ${save || fresh ? 'dark' : 'green'}`} onClick={() => play(newGame())}><b>Nova civilização</b>{save && <span>substitui o jogo salvo</span>}</button>
             <button className={`opt ${fresh ? 'green' : 'dark'}`} onClick={startTutorial}><b>Tutorial</b><span>{fresh ? 'recomendado · 2 minutos' : 'rever as mecânicas'}</span></button>
+            <button className="opt dark" onClick={() => { sfx('card'); setSetup(SANDBOX_DEFAULT) }}><b>Sandbox</b><span>sem objetivo · você ajusta o mundo</span></button>
             <button className="opt dark" onClick={() => { setMuted(!mute); setMute(!mute); if (mute) sfx('click') }}><b>{mute ? '🔇 Som desligado' : '🔊 Som ligado'}</b></button>
-          </div>
+          </div>}
         </div>
       </>
     )
@@ -212,7 +247,7 @@ export function App() {
       <div className="vignette" />
 
       {/* ---------- topo: recursos ---------- */}
-      <div className="bar frame">
+      <div className={`bar frame ${shown.length > 12 ? 'dense' : ''}`}>
         <Stat icon={<Sprite name="hand" size={28} />} value={`${state.actions}/${maxActions(state)}`} title={`Ações por turno: 3 do Centro + ${idle(state)} 👤 ociosos + estábulos/moinhos. As que sobram passam para o próximo turno (até ${2 * maxActions(state)}), para juntar em obras grandes.`} />
         <Stat icon={<Sprite name="people" size={30} />} value={`${state.pop}/${housing(state)}`} title="População / moradia" />
         <Stat icon={<Sprite name="smile" size={28} />} value={happy} cls={happy < 30 ? 'neg' : happy >= 75 ? 'pos' : ''}
@@ -221,8 +256,7 @@ export function App() {
           title="Energia ⚡: usada / gerada neste turno (não acumula). Usinas a carvão geram; Siderúrgica e Fábrica consomem." />}
         {(state.era >= 4 || state.pollution > 0) && <Stat icon={<Sprite name="smog" size={28} />} value={state.pollution} delta={pollutionDelta(state)}
           cls={state.pollution >= 40 ? 'neg' : ''} title={`Poluição ☁️ (0–100): tira ☁️/2 de 😊; acima de 40 traz eventos. Cada floresta e parque limpa.`} />}
-        {/* recursos da era atual sempre; os de eras passadas só quando há estoque ou movimento */}
-        {(Object.keys(RES) as Res[]).filter(r => RES[r].era === state.era || state.res[r] || inc[r] || ['food', 'money', 'knowledge'].includes(r) && RES[r].era <= state.era).map(r => (
+        {shown.map(r => (
           <Stat key={r} icon={<ResIcon r={r} size={30} />} value={state.res[r]} delta={inc[r]} title={RES[r].name} cls={state.res[r] < 0 ? 'neg' : ''} />
         ))}
         {state.era > 0 && <Stat icon={<Sprite name="star" size={28} />} value={state.rep} title="Reputação: +5% de 💰 em contratos por ⭐" />}

@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
 import {
-  abandon, accept, advanceEra, build, decline, housing, idle, keepPlaying, maxActions, buildLink, deliver, endTurn, hunt, offGrid, staffed, stopped, trade, linkCost, run, pollutionDelta, explore, exploreCost, happiness, hiddenHexes, newGame, production, resolveEvent, terrainAt,
+  abandon, accept, advanceEra, build, decline, eraGoals, housing, idle, keepPlaying, maxActions, buildLink, deliver, endTurn, hunt, offGrid, staffed, stopped, trade, linkCost, run, pollutionDelta, explore, exploreCost, happiness, hiddenHexes, newGame, production, resolveEvent, terrainAt,
   type State,
 } from './game'
 import { neighbors } from './hex'
@@ -289,4 +289,18 @@ test('✋ que sobram passam para o próximo turno, até o dobro do máximo', () 
   s = endTurn(s)
   expect(s.actions).toBe(2 * maxActions(s))
   expect(max).toBeGreaterThan(0)
+})
+
+test('sandbox: era inicial com estoque, sem invasões, produção e metas ajustáveis, sem mercado', () => {
+  let s = newGame(7, { threats: 0, abundance: 1.5, pace: 0.5, market: 'off', era: 4 })
+  expect(s.era).toBe(4)
+  expect(s.res.steel).toBe(30)
+  expect(s.flags).toContain('sandbox')
+  expect(eraGoals(s)[0].need).toBe(250) // 500 × 0,5
+  put(s, '1,0', 'plains', 'farm')
+  expect(production(s).food).toBe(4) // ⌊3 × 1,5⌋
+  put(s, '0,1', 'plains', 'market')
+  expect(() => trade(s, 'wood', -1)).toThrow('Mercado')
+  for (let i = 0; i < 40; i++) { s = endTurn({ ...s, res: { ...s.res, food: 99 } }); if (s.event) s.event = null }
+  expect(s.invaders.length + s.warnings.length).toBe(0)
 })

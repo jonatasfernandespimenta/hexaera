@@ -1254,8 +1254,11 @@ export function Board({ state, buildMode, linkMode, onHex, onEdge }: Props) {
             <Piece top={can ? '#303036' : '#24242a'} side="#1c1c20" soil="#2a2a30" glow={hover === k ? '#8888aa' : undefined}>
               <Engraving kind={hintOf(state.seed, h)} />
             </Piece>
-            {hover === k && (
+            {hover === k ? (
               <Html zIndexRange={[50, 0]} center position={[0, 0.9, 0]} className={`tip ${can ? '' : 'bad'}`}>Explorar · {cost} ✋</Html>
+            ) : (
+              // Custo sempre visível (no celular não existe "passar o mouse").
+              <Html zIndexRange={[40, 0]} center position={[0, H + 0.05, 0.42]} className={`tip cost ${can ? '' : 'bad'}`}>{cost} ✋</Html>
             )}
           </group>
         )

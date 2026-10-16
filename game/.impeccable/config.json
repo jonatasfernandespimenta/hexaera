@@ -8,6 +8,15 @@
         "value": "cubic-bezier(0.34, 1.56, 0.64, 1)",
         "createdAt": "2026-10-16T18:51:48.684Z",
         "reason": "mola das cartas, pedida pelo usuário"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "src/style.css"
+        ],
+        "createdAt": "2026-10-16T21:36:30.818Z",
+        "reason": "endturn tem borda nos 4 lados"
       }
     ]
   }
