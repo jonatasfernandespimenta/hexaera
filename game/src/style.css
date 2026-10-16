@@ -216,6 +216,8 @@ button { font: inherit; cursor: pointer; }
   text-shadow: 0 1px 0 #000;
 }
 .tip.bad { color: #ff8f73; }
+.tip.route { display: flex; flex-direction: column; align-items: center; gap: 1px; font-size: 13px; line-height: 1.2; }
+.tip.route small { font-size: 11px; opacity: 0.85; }
 .tip.cost { font-size: 11px; padding: 0 4px; opacity: 0.9; pointer-events: none; }
 .tip.warn { color: #ffd34d; border-color: #b8322a; }
 

@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Color, Object3D, ShaderMaterial, Vector3, type Group, type MeshStandardMaterial, type InstancedMesh, type PointLight } from 'three'
 import { BUILDINGS, HUNT_COST, LINKS, RES, THREATS, TERRAINS, type BuildingId, type Link, type Res } from '../core/data'
 import { sfx } from '../sfx'
-import { terrainAt, linked, offGrid, canLink, canPlace, centerMax, edgeKey, exploreCost, hiddenHexes, linkCost, staffed, stopped, type State, type Tile } from '../core/game'
+import { railNew, railPath, terrainAt, linked, offGrid, canLink, canPlace, centerMax, edgeKey, exploreCost, hiddenHexes, linkCost, staffed, stopped, type State, type Tile } from '../core/game'
 import { distance, key, neighbors, parse, toWorld, type Hex } from '../core/hex'
 import { Table } from './Table'
 import { Sprite, type SpriteName } from '../Sprite'
@@ -1174,6 +1174,8 @@ type Props = {
   fp?: boolean
   onExitFp?: () => void
   demolishMode?: boolean
+  railFrom?: Hex | null
+  railTo?: Hex | null
 }
 
 // Pista: metade das florestas e montanhas ocultas mostra a silhueta.
@@ -1248,7 +1250,7 @@ function FitCamera() {
   return null
 }
 
-export function Board({ state, buildMode, linkMode, onHex, onEdge, fp, onExitFp, demolishMode }: Props) {
+export function Board({ state, buildMode, linkMode, onHex, onEdge, fp, onExitFp, demolishMode, railFrom, railTo }: Props) {
   const [hover, setHover] = useState<string | null>(null)
   const [hoverEdge, setHoverEdge] = useState<string | null>(null)
   const seen = useRef(new Set(Object.keys(state.tiles)))
@@ -1256,6 +1258,12 @@ export function Board({ state, buildMode, linkMode, onHex, onEdge, fp, onExitFp,
   const stop = stopped(state)
   const working = new Set(staffed(state))
   const links = linked(state)
+  // Ferrovia: prévia da rota (origem escolhida → hex sob o mouse).
+  const target = railTo ? key(railTo) : hover // celular: destino tocado; computador: hex sob o mouse
+  const preview = railFrom && target ? railPath(state, railFrom, parse(target)) : null
+  const onRoute = new Set(preview?.map(key))
+  const fresh = preview ? railNew(state, preview).length : 0
+  const railCost: Record<string, number> = { actions: fresh * BUILDINGS.railway.actions, ...Object.fromEntries(Object.entries(BUILDINGS.railway.cost).map(([r, v]) => [r, v * fresh])) }
   const lifts = (k: string) => liftOf(k, state.tiles[k].terrain)
 
   // Pares de hexes revelados vizinhos (cada borda uma vez).
@@ -1294,7 +1302,11 @@ export function Board({ state, buildMode, linkMode, onHex, onEdge, fp, onExitFp,
         const isNew = !seen.current.has(k)
         if (isNew) seen.current.add(k)
         const lift = liftOf(k, tile.terrain)
-        const valid = buildMode && !canPlace(state, h, buildMode)
+        const b0 = tile.building
+        // Ferrovia: origem pode ser o Centro, um trilho ou hex livre; com origem escolhida, acende a rota até o mouse.
+        const valid = buildMode === 'railway'
+          ? (railFrom ? onRoute.has(k) : k === '0,0' || b0?.id === 'railway' || !canPlace(state, h, 'railway'))
+          : buildMode && !canPlace(state, h, buildMode)
         const wreck = demolishMode && !!tile.building
         const glow = wreck ? (hover === k ? '#ff6a4a' : '#c8402a') : valid ? '#7dff6a' : hover === k ? '#ffd890' : undefined
         const b = tile.building
@@ -1306,8 +1318,7 @@ export function Board({ state, buildMode, linkMode, onHex, onEdge, fp, onExitFp,
             <Piece top={TOP[tile.terrain]} side="#4a2e18" glow={glow} flip={isNew} lift={lift}>
               {tile.terrain === 'center' ? <Campfire hp={state.centerHp} max={centerMax(state)} /> : <Terrain tile={tile} k={k} />}
               {b && (b.id === 'railway' && b.turnsLeft === 0
-                ? <Track ends={neighbors(h).filter(n => key(n) === '0,0' || state.tiles[key(n)]?.building?.id === 'railway')
-                    .map(n => { const [nx, nz] = toWorld(n); return Math.atan2(nz - z, nx - x) })} />
+                ? <Track ends={neighbors(h).filter(n => state.links[edgeKey(h, n)] === 'rail').map(n => { const [nx, nz] = toWorld(n); return Math.atan2(nz - z, nx - x) })} />
                 : <Building id={b.id} done={b.turnsLeft === 0} />)}
               {b && working.has(k) && Array.from({ length: BUILDINGS[b.id].workers }, (_, i) => <Worker key={i} i={i} />)}
               {wolves.map(w => <Invader key={w.id} hp={w.hp} kind={w.kind} />)}
@@ -1324,7 +1335,17 @@ export function Board({ state, buildMode, linkMode, onHex, onEdge, fp, onExitFp,
             {half && hover !== k && (
               <Html zIndexRange={[50, 0]} center position={[0, 0.85 + lift, 0]} className="tip warn">{STOP_SHORT[half]}</Html>
             )}
-            {hover === k && tile.terrain !== 'center' && (
+            {preview && target === k && (
+              <Html zIndexRange={[60, 0]} center position={[0, 1.15 + lift, 0]} className="tip route">
+                <b>Ferrovia · {fresh} trilho{fresh === 1 ? '' : 's'}</b>
+                <span className={railCost.actions > state.actions ? 'neg' : ''}>{railCost.actions} ✋ (tem {state.actions})</span>
+                {(Object.entries(BUILDINGS.railway.cost) as [Res, number][]).map(([r]) => (
+                  <span key={r} className={railCost[r] > state.res[r] ? 'neg' : ''}>{railCost[r]} {RES[r].icon} (tem {state.res[r]})</span>
+                ))}
+                {railTo && <small>toque de novo para construir</small>}
+              </Html>
+            )}
+            {hover === k && !preview && tile.terrain !== 'center' && (
               <Html zIndexRange={[50, 0]} center position={[0, 1.1 + lift, 0]} className="tip">
                 {wolves.length > 0 && !buildMode ? `Atacar ${THREATS[wolves[0].kind].name.toLowerCase()} · ${HUNT_COST} ✋ · ` : ''}
                 {TERRAINS[tile.terrain].name}
@@ -1339,7 +1360,9 @@ export function Board({ state, buildMode, linkMode, onHex, onEdge, fp, onExitFp,
 
       {edges.map(([a, b]) => {
         const kind = state.links[edgeKey(a, b)]
-        return kind && <LinkPiece key={edgeKey(a, b)} a={a} b={b} la={lifts(key(a))} lb={lifts(key(b))} kind={kind} />
+        // 'rail' é desenhada pelos próprios hexes de Ferrovia (Track); só sobra na borda se for trilho antigo entre hexes sem Ferrovia.
+        const tracked = kind === 'rail' && [a, b].some(h => state.tiles[key(h)]?.building?.id === 'railway')
+        return kind && !tracked && <LinkPiece key={edgeKey(a, b)} a={a} b={b} la={lifts(key(a))} lb={lifts(key(b))} kind={kind} />
       })}
 
       {linkMode && edges.filter(([a, b]) => !canLink(state, a, b, linkMode)).map(([a, b]) => {

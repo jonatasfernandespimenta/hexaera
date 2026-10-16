@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
 import {
-  abandon, accept, advanceEra, build, decline, demolish, eraGoals, housing, idle, keepPlaying, maxActions, buildLink, deliver, endTurn, hunt, offGrid, staffed, stopped, trade, linkCost, run, pollutionDelta, explore, exploreCost, happiness, hiddenHexes, newGame, production, resolveEvent, terrainAt,
+  abandon, accept, advanceEra, build, buildRail, railPath, decline, demolish, eraGoals, housing, idle, keepPlaying, maxActions, buildLink, deliver, endTurn, hunt, offGrid, staffed, stopped, trade, linkCost, run, pollutionDelta, explore, exploreCost, happiness, hiddenHexes, newGame, production, resolveEvent, terrainAt,
   type State,
 } from './game'
 import { neighbors, parse } from './hex'
@@ -305,7 +305,7 @@ test('sandbox: era inicial com estoque, sem invasões, produção e metas ajust�
   expect(s.invaders.length + s.warnings.length).toBe(0)
 })
 
-test('ferrovia ocupa o hex: rede que encosta no Centro liga os vizinhos; demolir devolve metade', () => {
+test('ferrovia por rota (origem → destino) ocupa os hexes e liga os vizinhos; demolir corta a linha e devolve metade', () => {
   let s = newGame(3)
   s.era = 4; s.pop = 30; s.actions = 30
   Object.assign(s.res, { steel: 20, money: 500, stone: 20, tools: 10 })
@@ -313,9 +313,11 @@ test('ferrovia ocupa o hex: rede que encosta no Centro liga os vizinhos; demolir
   put(s, '3,0', 'plains', 'steelworks')
   expect(offGrid(s, '3,0')).toBe('sem ferrovia até o Centro')
   expect(() => buildLink(s, { q: 1, r: 0 }, { q: 2, r: 0 }, 'rail')).toThrow('hex inteiro')
-  for (const k of ['1,0', '2,0']) s = build(s, parse(k), 'railway')
-  s.tiles['1,0'].building!.turnsLeft = 0; s.tiles['2,0'].building!.turnsLeft = 0
-  expect(offGrid(s, '3,0')).toBeNull() // 3,0 encosta em 2,0, que chega ao anel 1 por 1,0
+  const path = railPath(s, { q: 0, r: 0 }, { q: 2, r: 0 })!
+  expect(path.map(h => `${h.q},${h.r}`)).toEqual(['0,0', '1,0', '2,0'])
+  s = buildRail(s, path)
+  expect(s.tiles['2,0'].building!.id).toBe('railway')
+  expect(offGrid(s, '3,0')).toBeNull() // 3,0 encosta em 2,0, que chega ao Centro pela rota
   const steel = s.res.steel, acts = s.actions
   s = demolish(s, { q: 1, r: 0 })
   expect(s.tiles['1,0'].building).toBeUndefined()

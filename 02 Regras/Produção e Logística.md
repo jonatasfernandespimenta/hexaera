@@ -61,7 +61,10 @@ Infra destruída por invasores ou eventos **desconecta** tudo que dependia dela 
 
 
 ## Ferrovia ocupa um hex ✅ (2026-10-16)
-Diferente de trilha e estrada (que vão na **borda**), a **Ferrovia é uma peça que ocupa o hex inteiro** (3 ✋ + 2 🔩 + 20 💰; nada mais cabe nele).
-- Hexes de Ferrovia vizinhos formam uma **rede**. Se a rede **encosta no Centro** (algum trilho no anel 1), **todo hex vizinho da rede** fica ligado por ferrovia — e isso também vale como estrada e trilha.
-- O trilho se desenha sozinho (**auto-conexão**): liga nos trilhos vizinhos e no Centro; 2 pontas em ângulo viram **curva**, 3+ viram entroncamento, 1 ponta tem para-choque.
+Diferente de trilha e estrada (que vão na **borda**), a **Ferrovia ocupa hexes inteiros** (3 ✋ + 2 🔩 + 20 💰 **por hex**; nada mais cabe nele).
+- **Traçado por rota:** escolhe a carta, toca na **origem** (Centro, trilho existente ou hex livre) e no **destino**; a rota mais curta (e mais reta) por hexes livres/trilhos acende com o custo total, e o segundo toque constrói a linha inteira.
+- A linha só liga os hexes **na ordem da rota** (cada trecho fica gravado como ligação entre vizinhos) — sem laços ou trilhos paralelos quando trilhos se encostam.
+- Todo hex **encostado** numa linha que chega ao Centro fica ligado por ferrovia — vale também como estrada e trilha.
+- Desenho: reta, **curva** quando a rota dobra, entroncamento onde rotas se cruzam, para-choque na ponta.
+- Demolir um hex de trilho remove também os trechos da rota que passavam por ele (a linha é cortada).
 - Rodovia (Moderna) continua sendo borda e vale como ferrovia.

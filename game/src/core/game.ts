@@ -137,15 +137,13 @@ export function linked(s: State): Record<Link, Set<string>> {
     }
     return seen
   }
-  // Rede de trilhos (hexes de Ferrovia prontos) que encosta no Centro: ela e seus vizinhos ficam ligados por ferrovia.
-  const rails = Object.keys(s.tiles).filter(k => done(s.tiles[k]) && s.tiles[k].building!.id === 'railway')
-  const net = new Set(rails.filter(k => distance(parse(k)) === 1))
-  for (const queue = [...net]; queue.length;)
-    for (const n of neighbors(parse(queue.shift()!)).map(key))
-      if (rails.includes(n) && !net.has(n)) { net.add(n); queue.push(n) }
-  const byRail = new Set([...net].flatMap(k => [k, ...neighbors(parse(k)).map(key)]))
+  // Linhas de trem: hexes de Ferrovia ligados ao Centro pelas rotas traçadas (bordas 'rail').
+  // Todo hex encostado num trilho dessas linhas fica ligado por ferrovia (vale também como estrada e trilha).
+  const viaRail = bfs(3)
+  const net = [...viaRail].filter(k => s.tiles[k]?.building?.id === 'railway')
+  const byRail = new Set(net.flatMap(k => [k, ...neighbors(parse(k)).map(key)]))
   const plus = (a: Set<string>) => new Set([...a, ...byRail])
-  return { trail: plus(bfs(1)), road: plus(bfs(2)), rail: plus(bfs(3)), highway: bfs(4) }
+  return { trail: plus(bfs(1)), road: plus(bfs(2)), rail: plus(viaRail), highway: bfs(4) }
 }
 
 // Custo de construir/melhorar a conexão de uma borda. Montanha dobra; Rio exige ponte (só na primeira vez).
@@ -443,6 +441,49 @@ export function build(prev: State, h: Hex, id: BuildingId): State {
   return s
 }
 
+// ---------- ferrovia por rota ----------
+// O jogador escolhe origem e destino; o caminho passa por trilhos existentes e hexes livres (o Centro só nas pontas).
+// Vizinhos ordenados pela distância ao destino deixam a linha mais reta.
+const isRail = (s: State, k: string) => s.tiles[k]?.building?.id === 'railway'
+export function railPath(s: State, from: Hex, to: Hex): Hex[] | null {
+  const a = key(from), b = key(to)
+  const free = (k: string) => k === b || isRail(s, k) || (k !== '0,0' && !!s.tiles[k] && !canPlace(s, parse(k), 'railway'))
+  if (!s.tiles[a] || !s.tiles[b] || a === b || (a !== '0,0' && !free(a)) || !free(b)) return null
+  const prev = new Map<string, string>([[a, a]])
+  const queue = [a]
+  while (queue.length) {
+    const u = queue.shift()!
+    if (u === b) break
+    if (u === '0,0' && u !== a) continue
+    for (const n of neighbors(parse(u)).sort((x, y) => distance(x, to) - distance(y, to))) {
+      const v = key(n)
+      if (prev.has(v) || !free(v)) continue
+      prev.set(v, u)
+      queue.push(v)
+    }
+  }
+  if (!prev.has(b)) return null
+  const path: Hex[] = []
+  for (let v = b; ; v = prev.get(v)!) { path.unshift(parse(v)); if (v === a) break }
+  return path
+}
+
+// Hexes novos da rota (os que ainda não são trilho nem Centro).
+export const railNew = (s: State, path: Hex[]) => path.filter(h => key(h) !== '0,0' && !isRail(s, key(h)))
+
+export function buildRail(prev: State, path: Hex[]): State {
+  guard(prev)
+  if (path.length < 2) throw new Error('Escolha um destino diferente da origem.')
+  const fresh = railNew(prev, path)
+  const def = BUILDINGS.railway
+  if (fresh.length * def.actions > prev.actions) throw new Error(`Faltam ações: ${fresh.length} trilhos custam ${fresh.length * def.actions} ✋.`)
+  let s = prev
+  for (const h of fresh) s = build(s, h, 'railway')
+  s = structuredClone(s)
+  for (let i = 1; i < path.length; i++) s.links[edgeKey(path[i - 1], path[i])] = 'rail'
+  return s
+}
+
 // Demolir: o hex fica livre e volta metade do custo (arredonda para baixo). Moradores sem casa vão embora.
 export const DEMOLISH_COST = 1
 export function demolish(prev: State, h: Hex): State {
@@ -455,6 +496,7 @@ export function demolish(prev: State, h: Hex): State {
   s.actions -= DEMOLISH_COST
   for (const [r, v] of Object.entries(def.cost) as [Res, number][]) s.res[r] += Math.floor(v / 2)
   delete s.tiles[key(h)].building
+  for (const n of neighbors(h)) if (s.links[edgeKey(h, n)] === 'rail') delete s.links[edgeKey(h, n)] // trilho sai junto com a rota
   const gone = s.pop - Math.min(s.pop, housing(s))
   s.pop -= gone
   log(s, `${def.name} demolida.${gone ? ` ${gone} 👤 partiram sem casa.` : ''}`)

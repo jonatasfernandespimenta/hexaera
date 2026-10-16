@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { BUILDINGS, CONTRACT_EVERY, CONTRACTS, EVENT_EVERY, ERAS, LINKS, NEXT_ERA_NAME, RES, TERRAINS, type BuildingId, type Link, type Res } from './core/data'
 import { EVENT_BY_ID } from './core/events'
 import {
-  abandon, accept, advanceEra, demolish, DEMOLISH_COST, SANDBOX_DEFAULT, type Sandbox, keepPlaying, terrainsOf, decline, DECLINE_COST, affordable, build, buildLink, canChoose, centerMax, contractReward, debt, deliver, endTurn, eraGoals,
+  abandon, accept, advanceEra, buildRail, canPlace, railPath, demolish, DEMOLISH_COST, SANDBOX_DEFAULT, type Sandbox, keepPlaying, terrainsOf, decline, DECLINE_COST, affordable, build, buildLink, canChoose, centerMax, contractReward, debt, deliver, endTurn, eraGoals,
   explore, happiness, pollutionDelta, run, terrainAt, housing, hunt, idle, income, maxActions, maxContracts, newGame, resolveEvent, shortfall, type State,
 } from './core/game'
 import { distance, key, type Hex } from './core/hex'
@@ -92,8 +92,19 @@ function SandboxSetup({ value, onChange, onBack, onStart }: { value: Sandbox; on
   )
 }
 
+// Dev: localhost:5179/?teste abre um jogo pronto para testar transporte — Moderna (Rodovia + Ferrovia),
+// 999 de cada recurso, 99 ✋, mapa revelado até o anel 3, sem invasões. Não salva por cima do jogo normal.
+const TEST = import.meta.env.DEV && new URLSearchParams(location.search).has('teste')
+function testGame(): State {
+  const s = newGame(42, { threats: 0, abundance: 1, pace: 1, market: 'volatil', era: 5 })
+  for (const r of Object.keys(s.res) as Res[]) s.res[r] = 999
+  for (let q = -3; q <= 3; q++) for (let r = -3; r <= 3; r++)
+    if (distance({ q, r }) <= 3 && !s.tiles[key({ q, r })]) s.tiles[key({ q, r })] = { terrain: terrainAt(s.seed, { q, r }) }
+  return { ...s, pop: 60, actions: 99, event: null }
+}
+
 export function App() {
-  const [state, setState] = useState<State>(() => loadSave() ?? newGame())
+  const [state, setState] = useState<State>(() => TEST ? testGame() : loadSave() ?? newGame())
   const [mode, setMode] = useState<BuildingId | null>(null)
   const [link, setLink] = useState<Link | null>(null)
   const [tab, setTab] = useState(0) // era exibida na mão de cartas
@@ -101,7 +112,7 @@ export function App() {
   const [hand, setHand] = useState(true)
   const [toast, setToast] = useState<string | null>(null)
   const [news, setNews] = useState<string | null>(null)
-  const [screen, setScreen] = useState<'menu' | 'game'>('menu')
+  const [screen, setScreen] = useState<'menu' | 'game'>(TEST ? 'game' : 'menu')
   const [sideOpen, setSideOpen] = useState(false)
   const [setup, setSetup] = useState<Sandbox | null>(null) // tela de opções do Sandbox
   const [tut, setTut] = useState<number | null>(null) // passo atual do tutorial
@@ -109,7 +120,9 @@ export function App() {
   const [deck, setDeck] = useState(false) // celular: mão aberta
   const [fp, setFp] = useState(false) // primeira pessoa
   const [wreck, setWreck] = useState(false) // modo demolir
-  const pickBuilding = (id: BuildingId | null) => { setMode(id); setLink(null); setDeck(false); setWreck(false) }
+  const [railFrom, setRailFrom] = useState<Hex | null>(null) // origem da rota de ferrovia
+  const [railTo, setRailTo] = useState<Hex | null>(null) // celular: destino escolhido, aguardando confirmação
+  const pickBuilding = (id: BuildingId | null) => { setMode(id); setLink(null); setDeck(false); setWreck(false); setRailFrom(null); setRailTo(null) }
   const pickLink = (l: Link | null) => { setLink(l); setMode(null); setDeck(false); setWreck(false) }
   const toggle = (p: Panel) => setPanel(panel === p ? null : p)
   useEffect(() => setTab(state.era), [state.era])
@@ -149,7 +162,7 @@ export function App() {
     return () => window.removeEventListener('pointerdown', go)
   }, [])
 
-  useEffect(() => { if (screen === 'game' && tut === null) store.set(SAVE, JSON.stringify(state)) }, [state, screen, tut])
+  useEffect(() => { if (screen === 'game' && tut === null && !TEST) store.set(SAVE, JSON.stringify(state)) }, [state, screen, tut])
 
   const play = (s: State) => { setState(s); setTut(null); setPanel(null); setMode(null); setLink(null); setScreen('game') }
   const goStep = (i: number, s = state) => {
@@ -181,7 +194,7 @@ export function App() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { if (mode || link || wreck) sfx('uncard'); setMode(null); setLink(null); setWreck(false); setPanel(null) }
+      if (e.key === 'Escape') { if (mode || link || wreck) sfx('uncard'); setMode(null); setLink(null); setWreck(false); setRailFrom(null); setRailTo(null); setPanel(null) }
       if (e.key === 'Enter' && screen === 'game' && !fp && !state.over && !state.event) act(() => endTurn(state), 'turn')
       if (e.code === 'KeyP' && screen === 'game' && !MOBILE()) { setFp(v => !v); setMode(null); setLink(null); setPanel(null) }
     }
@@ -194,6 +207,20 @@ export function App() {
     if (!state.tiles[key(h)]) return act(() => explore(state, h), 'explore')
     if (wreck) {
       if (state.tiles[key(h)].building) act(() => demolish(state, h), 'hit')
+    } else if (mode === 'railway') {
+      // Ferrovia: 1º toque = origem, 2º = destino (constrói a rota inteira).
+      if (!railFrom) {
+        const k = key(h)
+        if (k === '0,0' || state.tiles[k].building?.id === 'railway' || !canPlace(state, h, 'railway')) { sfx('card'); setRailFrom(h) }
+        else setToast('Origem: o Centro, um trilho ou um hex livre.')
+      } else {
+        const path = railPath(state, railFrom, h)
+        if (!path) return setToast('Sem caminho livre até aí.')
+        // Celular não tem hover: 1º toque no destino mostra rota e custo, 2º no mesmo hex constrói.
+        if (MOBILE() && key(h) !== (railTo && key(railTo))) { sfx('hover'); return setRailTo(h) }
+        act(() => buildRail(state, path), 'link')
+        setRailFrom(null); setRailTo(null); setMode(null)
+      }
     } else if (mode) {
       act(() => build(state, h, mode), 'build')
       setMode(null)
@@ -223,7 +250,7 @@ export function App() {
       <Canvas shadows dpr={[1, 2]} camera={{ position: [0, 10.5, 7.2], fov: 38 }}>
         <color attach="background" args={['#1a0f08']} />
         <fog attach="fog" args={['#1a0f08', 18, 38]} />
-        <Board state={state} buildMode={mode} linkMode={link} demolishMode={wreck} onHex={onHex} fp={fp} onExitFp={() => setFp(false)}
+        <Board state={state} buildMode={mode} linkMode={link} demolishMode={wreck} railFrom={railFrom} railTo={railTo} onHex={onHex} fp={fp} onExitFp={() => setFp(false)}
           onEdge={(a, b) => link && act(() => buildLink(state, a, b, link), 'link')} />
       </Canvas>
   )
@@ -447,7 +474,7 @@ export function App() {
       )}
 
       {wreck && <div className="hint frame">Demolir ({DEMOLISH_COST} ✋): toque numa construção · volta metade do material <button className="x" onClick={() => { sfx('uncard'); setWreck(false) }}>✕</button></div>}
-      {mode && <div className="hint frame">{BUILDINGS[mode].name}: escolha um hex destacado <button className="x" onClick={() => { sfx('uncard'); pickBuilding(null) }}>✕</button></div>}
+      {mode && <div className="hint frame">{mode === 'railway' ? (railFrom ? (railTo ? 'Ferrovia: toque de novo no destino para construir' : 'Ferrovia: toque no destino (a rota acende com o custo)') : 'Ferrovia: toque na origem — Centro, trilho ou hex livre') : `${BUILDINGS[mode].name}: escolha um hex destacado`} <button className="x" onClick={() => { sfx('uncard'); pickBuilding(null) }}>✕</button></div>}
       {link && <div className="hint frame">{LINKS[link].name}: toque numa borda entre dois hexes <button className="x" onClick={() => { sfx('uncard'); pickLink(null) }}>✕</button></div>}
       {toast && <div className="toast frame">{toast}</div>}
       {!toast && news && <div className="news frame">{news}</div>}

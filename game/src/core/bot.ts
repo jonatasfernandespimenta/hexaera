@@ -4,7 +4,7 @@ import { BUILDINGS, ERAS, HUNT_COST, LINKS, RES, type BuildingId, type Link, typ
 import { EVENT_BY_ID } from './events'
 import {
   accept, advanceEra, buildLink, build, canChoose, canLink, canPlace, count, deliver, endTurn, eraGoals, explore, exploreCost,
-  happiness, hiddenHexes, housing, hunt, maxActions, trade, tradeLimit, buyPrice, huntDamage, income, linkCost, linked, maxContracts, newGame, offGrid, resolveEvent, run, type State,
+  buildRail, railNew, happiness, hiddenHexes, housing, hunt, maxActions, trade, tradeLimit, buyPrice, huntDamage, income, linkCost, linked, maxContracts, newGame, offGrid, resolveEvent, run, type State,
 } from './game'
 import { distance, key, neighbors, parse, type Hex } from './hex'
 
@@ -80,11 +80,12 @@ function connect(s: State): State | null {
       }
     }
     if (tile) {
-      // Assenta trilho a partir do Centro em direção à construção.
-      for (let v = end; v && v !== k; v = prev.get(v)!)
-        if (s.tiles[v].building?.id !== tile) return !canPlace(s, parse(v), tile) && fits(s, BUILDINGS[tile].cost) && s.actions >= BUILDINGS[tile].actions
-          ? build(s, parse(v), tile) : null
-      continue
+      // Traça a rota Centro → … → hex ao lado da construção, de uma vez (guarda ✋ se não couber).
+      const route: Hex[] = [{ q: 0, r: 0 }]
+      for (let v = end; v && v !== k; v = prev.get(v)!) route.push(parse(v))
+      const fresh = railNew(s, route)
+      if (route.length < 2 || fresh.length * BUILDINGS[tile].actions > s.actions) return null
+      return buildRail(s, route)
     }
     for (let v = end; v && v !== k; v = prev.get(v)!) {
       const a = parse(v), c = parse(prev.get(v)!)
