@@ -21,16 +21,18 @@ export function useOnline(id: string) {
   const [outbox, setOutbox] = useState<Convoy[]>([])
   const [vote, setVote] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [sendingNow, setSending] = useState(false) // "Fim do turno" em andamento: UI trava os controles
 
   // Espelho para as funções assíncronas (evita closures velhas).
-  const cur = useRef({ creds: null as Creds | null, local: null as State | null, outbox: [] as Convoy[], vote: false })
+  const cur = useRef({ creds: null as Creds | null, coop: false, local: null as State | null, outbox: [] as Convoy[], vote: false })
   const chain = useRef<Promise<void>>(Promise.resolve())
   const busy = useRef(0)
   const phaseRef = useRef<OnlinePhase>('loading')
   phaseRef.current = phase
-  const sending = useRef(false) // clique duplo em "Fim do turno"
+  const sending = useRef(false) // trava entradas e clique duplo enquanto o turno é enviado
 
-  const setState = useCallback((s: State) => { cur.current.local = s; setLocal(s) }, [])
+  const put = useCallback((s: State) => { cur.current.local = s; setLocal(s) }, [])
+  const setState = useCallback((s: State) => { if (!sending.current) put(s) }, [put])
   const resetTurn = () => { cur.current.outbox = []; cur.current.vote = false; setOutbox([]); setVote(false) }
 
   // Enfileira uma tarefa: nunca duas requisições ao mesmo tempo.
@@ -44,6 +46,7 @@ export function useOnline(id: string) {
   // Aplica uma leitura do servidor ao estado local; fecha o turno se os dois já enviaram.
   const apply = useCallback(async (v: View, creds: Creds) => {
     setMeta(v.meta); setSeat(v.seat); setRival(v.rival)
+    cur.current.coop = v.meta.mode === 'coop'
     let local = cur.current.local!
     const settled = settle(local, v.rival?.state ?? null)
     let save = settled.over !== local.over
@@ -54,10 +57,10 @@ export function useOnline(id: string) {
       save = true
       p = phaseOf(v.me, v.rival, local)
     }
-    setState(local)
+    put(local)
     setPhase(p)
     if (save) await putState(id, creds.token, local)
-  }, [id, setState])
+  }, [id, put])
 
   const refresh = useCallback(async () => {
     const creds = cur.current.creds
@@ -70,7 +73,7 @@ export function useOnline(id: string) {
   useEffect(() => {
     let alive = true
     const creds = getCreds(id)
-    cur.current = { creds, local: null, outbox: [], vote: false }
+    cur.current = { creds, coop: false, local: null, outbox: [], vote: false }
     setPhase('loading'); setError(null); setOutbox([]); setVote(false)
     if (!creds) { setPhase('error'); setError('Você não está nesta partida.'); return }
     run(async () => {
@@ -94,10 +97,14 @@ export function useOnline(id: string) {
   }, [phase, run, refresh])
 
   const addConvoy = useCallback((c: Convoy) => {
+    if (sending.current) return
     cur.current.outbox = [...cur.current.outbox, c]
     setOutbox(cur.current.outbox)
   }, [])
-  const setVoteCb = useCallback((v: boolean) => { cur.current.vote = v; setVote(v) }, [])
+  const setVoteCb = useCallback((v: boolean) => {
+    if (sending.current || !cur.current.coop) return // voto de era só existe no coop
+    cur.current.vote = v; setVote(v)
+  }, [])
 
   // "Fim do turno": salva o estado antes do endTurn, envia o turno e relê (o fechamento vem no apply).
   const endTurn = useCallback(async () => {
@@ -105,6 +112,7 @@ export function useOnline(id: string) {
     if (!creds || !local || phaseRef.current !== 'playing' || sending.current) return
     try { guard(local) } catch (e) { setError(msg(e)); return }
     sending.current = true
+    setSending(true)
     await run(async () => {
       const s = cur.current.local! // relido na vez: uma consulta anterior pode tê-lo mudado
       const T = s.turn
@@ -122,8 +130,8 @@ export function useOnline(id: string) {
         if (v.me.turn >= T) resetTurn()
         await apply(v, creds).catch(() => {})
       }
-    }).finally(() => { sending.current = false })
+    }).finally(() => { sending.current = false; setSending(false) })
   }, [id, run, refresh, apply])
 
-  return { meta, seat, phase, state, setState, rival, outbox, addConvoy, vote, setVote: setVoteCb, endTurn, error }
+  return { meta, seat, phase, state, setState, rival, outbox, addConvoy, vote, setVote: setVoteCb, endTurn, sending: sendingNow, error }
 }

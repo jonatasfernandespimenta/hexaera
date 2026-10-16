@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest'
 import type { Convoy } from './core/convoy'
+import { ERAS } from './core/data'
 import { endTurn, type State } from './core/game'
 import { newMatchGame } from './core/match'
 import { arrivalsFor, closeTurn, phase } from './online'
@@ -66,4 +67,12 @@ test('exército que chega em T vira aviso ao fechar T e invasores no turno segui
   const next = endTurn(closed)
   expect(next.raids).toHaveLength(0)
   expect(next.invaders.filter(i => i.at === closed.raids[0].at)).toHaveLength(3)
+})
+
+test('versus: votos são ignorados (última era não trava o fechamento)', () => {
+  const s = { ...newMatchGame(5, 'versus', 0, true), era: ERAS.length - 1 }
+  const closed = closeTurn(s, rival({ votes: [1] }), true)
+  expect(closed.turn).toBe(2)
+  expect(closed.era).toBe(ERAS.length - 1)
+  expect(closed.over).toBeNull()
 })

@@ -13,7 +13,7 @@ export const arrivalsFor = (rivalSent: Convoy[], turn: number) => rivalSent.filt
 export function closeTurn(prev: State, rival: Rival, myVote: boolean): State {
   const T = prev.turn
   let s = prev
-  if (myVote && rival.votes.includes(T)) s = advanceEra(s, true)
+  if (s.match?.mode === 'coop' && myVote && rival.votes.includes(T)) s = advanceEra(s, true) // voto de era é só do coop
   if (!s.over) s = receive(endTurn(s), arrivalsFor(rival.sent, T)) // última era no coop: a vitória encerra aqui
   return settle(s, rival.state)
 }
