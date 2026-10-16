@@ -128,6 +128,10 @@ export const STEPS: Step[] = [
     text: 'Na Era Industrial surgem ⚡ energia (não acumula) e ☁️ poluição, que derruba a 😊. Florestas e parques limpam o ar.',
   },
   {
+    title: 'Jogar online',
+    text: 'No versus, chegue ao Bronze e construa o Campo de guerra. Recrute tropas e clique em Atacar: o exército marcha sozinho e chega ao rival como invasores. Tropas em casa defendem o seu Centro.',
+  },
+  {
     title: 'Pronto!',
     text: 'Vença concluindo o Marco Final da Era Contemporânea. Se o ❤️ do Centro ou a 👤 população zerar, a partida acaba. Boa sorte!',
   },

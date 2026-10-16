@@ -268,6 +268,8 @@ export const EN: Record<string, string> = {
   'Mais adiante': 'Further on',
   'Na Era Industrial surgem ⚡ energia (não acumula) e ☁️ poluição, que derruba a 😊. Florestas e parques limpam o ar.':
     'In the Industrial Age come ⚡ power (does not stack) and ☁️ pollution, which drags 😊 down. Forests and parks clean the air.',
+  'No versus, chegue ao Bronze e construa o Campo de guerra. Recrute tropas e clique em Atacar: o exército marcha sozinho e chega ao rival como invasores. Tropas em casa defendem o seu Centro.':
+    'In versus, reach the Bronze Age and build the War Camp. Recruit troops and click Attack: the army marches on its own and reaches the rival as invaders. Troops at home defend your Center.',
   'Pronto!': 'Ready!',
   'Vença concluindo o Marco Final da Era Contemporânea. Se o ❤️ do Centro ou a 👤 população zerar, a partida acaba. Boa sorte!':
     'Win by completing the Final Landmark of the Contemporary Age. If the Center ❤️ or 👤 population hits zero, the game ends. Good luck!',
