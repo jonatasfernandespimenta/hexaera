@@ -5,3 +5,5 @@ dist/
 .obsidian/workspace*.json
 *.hook.cache.json
 hook.cache.json
+.next/
+next-env.d.ts

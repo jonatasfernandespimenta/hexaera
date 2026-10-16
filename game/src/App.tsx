@@ -130,7 +130,7 @@ export function App() {
 
   // Dev: window.hex.get()/set() para inspecionar e montar situações de teste no console.
   // reveal(n) revela todos os hexes até o anel n (terreno real da seed).
-  if (import.meta.env.DEV) (window as any).hex = {
+  if (process.env.NODE_ENV === 'development') (window as any).hex = {
     get: () => state, set: setState,
     reveal: (n: number) => setState(s => {
       const t = { ...s.tiles }
