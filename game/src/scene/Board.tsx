@@ -7,6 +7,10 @@ import { sfx } from '../sfx'
 import { terrainAt, linked, offGrid, canLink, canPlace, centerMax, edgeKey, exploreCost, hiddenHexes, linkCost, staffed, stopped, type State, type Tile } from '../core/game'
 import { distance, key, neighbors, parse, toWorld, type Hex } from '../core/hex'
 import { Table } from './Table'
+import { Sprite, type SpriteName } from '../Sprite'
+
+// Ícone de cada ameaça, na ordem de THREATS (uma por era).
+const THREAT_ART: SpriteName[] = ['th_wolf', 'th_bandit', 'th_swords', 'th_army', 'th_dynamite', 'th_spy', 'th_cyber']
 import { Vox as V, windTime } from './vox'
 import { boxGeo, Shape, Vox, voxMat } from './voxbox'
 
@@ -970,7 +974,7 @@ function Invader({ hp, kind }: { hp: number; kind: number }) {
         <Vox key={`${x}${z}`} p={[x, 0.03, z]} s={[0.04, 0.06, 0.04]} c="#55555a" />
       ))}
       </>}
-      <Html zIndexRange={[50, 0]} center position={[0, 0.5, 0]} className="tip bad">{THREATS[kind].icon} ❤️{hp}</Html>
+      <Html zIndexRange={[50, 0]} center position={[0, 0.5, 0]} className="tip bad"><Sprite name={THREAT_ART[kind]} size={18} /> ❤️{hp}</Html>
     </group>
   )
 }
@@ -1191,7 +1195,7 @@ export function Board({ state, buildMode, linkMode, onHex, onEdge }: Props) {
               {wolves.map(w => <Invader key={w.id} hp={w.hp} kind={w.kind} />)}
             </Piece>
             {state.warnings.includes(k) && (
-              <Html zIndexRange={[50, 0]} center position={[0, 1.2 + lift, 0]} className="tip warn">⚠️ ataque no próximo turno</Html>
+              <Html zIndexRange={[50, 0]} center position={[0, 1.2 + lift, 0]} className="tip warn"><Sprite name={THREAT_ART[state.era]} size={18} /> ataque no próximo turno</Html>
             )}
             {b && b.hp < BUILDINGS[b.id].hp && (
               <Html zIndexRange={[50, 0]} center position={[0.4, 0.9 + lift, 0]} className="tip bad">❤️{b.hp}</Html>

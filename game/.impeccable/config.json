@@ -17,6 +17,15 @@
         ],
         "createdAt": "2026-10-16T21:36:30.818Z",
         "reason": "endturn tem borda nos 4 lados"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "style.css"
+        ],
+        "createdAt": "2026-10-16T21:37:27.425Z",
+        "reason": "endturn tem borda nos 4 lados"
       }
     ]
   }

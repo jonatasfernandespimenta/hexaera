@@ -131,3 +131,9 @@ Sprites de interface: `atlas4.png` (construções Bronze→Industrial e recursos
 
 ## Celular
 Layout em `style.css` (`@media (max-width: 820px), (max-height: 520px)`): barra de recursos rolável, Objetivo/Contrato recolhidos (toca no título), botões redondos à direita sem minimapa, painéis viram folha de baixo, câmera recua em retrato. **Mão de cartas vira um monte**; tocar abre todas em grade sobre a tela escurecida e escolher uma fecha de novo.
+
+## Atlas 6–8 (2026-10-16)
+- `atlas6.png`: Contemporânea (solar, eólica, nuclear, baterias, data center, fábrica automatizada, centro logístico, parque urbano, torre residencial, fazenda vertical, **Cidade Inteligente**) + recursos 🔌 🚗 🔋 💾 (🛢 usa o ícone do poço).
+- `atlas7.png`: Fazenda senhorial, Fazenda mecanizada, Poço de petróleo, Termelétrica, Hidrelétrica, Fábrica de eletrônicos, Montadora, Prédio residencial, Hospital, Estádio, Torreta, Estufa, Rodovia.
+- `atlas8.png`: ilustrações de evento (seca, festa, invasão/incêndio, tempestade, poluição/protesto, comércio) e ícones das 7 ameaças (aparecem no aviso de ataque e sobre o invasor).
+Com isso **nenhuma carta ou recurso usa emoji**. Emoji ainda aparece só em textos corridos (descrições, registro, rótulos do tabuleiro).

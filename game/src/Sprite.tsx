@@ -5,6 +5,9 @@ const SHEETS = [
   { url: '/ui/atlas3.png', w: 2000, h: 667 }, // livros, população
   { url: '/ui/atlas4.png', w: 1254, h: 1254 }, // construções Bronze→Industrial, recursos
   { url: '/ui/atlas5.png', w: 1254, h: 1254 }, // interface, conexões, casas, plantações
+  { url: '/ui/atlas6.png', w: 1254, h: 1254 }, // Contemporânea + recursos modernos
+  { url: '/ui/atlas7.png', w: 1254, h: 1254 }, // comida por era, Moderna, Rodovia
+  { url: '/ui/atlas8.png', w: 1254, h: 1254 }, // ilustrações de eventos, ícones de ameaças
 ]
 
 export const SPRITES = {
@@ -29,6 +32,18 @@ export const SPRITES = {
   sun: [849, 235, 193, 265, 4], hammer: [1055, 254, 191, 251, 4], scroll: [237, 569, 195, 239, 4], gear: [438, 582, 176, 224, 4],
   trail: [626, 619, 194, 184, 4], road: [829, 614, 206, 198, 4], hut: [1044, 567, 205, 245, 4], cottage: [32, 888, 276, 262, 4],
   townhouse: [320, 837, 279, 315, 4], farm: [606, 844, 349, 314, 4], field: [963, 939, 269, 211, 4],
+  solar: [7, 79, 320, 245, 5], wind: [343, 26, 267, 310, 5], nuclear: [633, 28, 297, 316, 5], batteryplant: [945, 95, 301, 237, 5],
+  datacenter: [8, 345, 310, 280, 5], autofactory: [324, 355, 287, 270, 5], logistics: [619, 373, 320, 252, 5], urbanpark: [944, 349, 301, 265, 5],
+  skyscraper: [19, 625, 266, 345, 5], vertfarm: [315, 625, 282, 336, 5], landmark: [610, 625, 330, 348, 5], oilwell: [956, 688, 287, 274, 5],
+  electronics: [15, 995, 285, 226, 5], cars: [321, 987, 292, 234, 5], batteries: [636, 983, 294, 239, 5], tech: [957, 982, 281, 238, 5],
+  manor: [40, 32, 392, 295, 6], mechfarm: [455, 26, 394, 304, 6], pumpjack: [876, 15, 339, 330, 6], thermal: [10, 335, 312, 323, 6],
+  hydro: [321, 343, 306, 310, 6], electronicsplant: [632, 363, 306, 294, 6], carplant: [948, 371, 298, 282, 6], apartment: [10, 665, 297, 290, 6],
+  hospital: [317, 665, 310, 297, 6], stadium: [633, 706, 339, 264, 6], turret: [982, 684, 263, 273, 6], greenhouse: [270, 980, 357, 246, 6],
+  highway: [655, 955, 376, 268, 6],
+  ev_drought: [22, 27, 288, 325, 7], ev_festival: [322, 30, 298, 322, 7], ev_invasion: [629, 20, 305, 334, 7], ev_storm: [946, 20, 289, 335, 7],
+  ev_pollution: [103, 335, 481, 383, 7], ev_trade: [651, 379, 503, 336, 7],
+  th_wolf: [30, 712, 272, 262, 7], th_bandit: [336, 712, 276, 262, 7], th_swords: [640, 712, 275, 262, 7], th_army: [948, 712, 278, 262, 7],
+  th_dynamite: [186, 958, 266, 262, 7], th_spy: [494, 958, 272, 264, 7], th_cyber: [811, 958, 279, 265, 7],
 } satisfies Record<string, number[]>
 
 export type SpriteName = keyof typeof SPRITES

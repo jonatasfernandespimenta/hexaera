@@ -247,7 +247,6 @@ button { font: inherit; cursor: pointer; }
 .timer.urgent { background: #8e2a1c; border-color: #ffb08a; animation: pulse 1s ease-in-out infinite; }
 .optrow { display: flex; gap: 6px; margin: 0 10px 8px; }
 .optrow .opt { flex: 1; margin: 0; }
-.emoji { line-height: 1; display: inline-block; }
 
 /* ---------- tela inicial ---------- */
 .title { position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle, #0004, #000b); }

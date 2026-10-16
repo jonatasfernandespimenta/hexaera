@@ -15,34 +15,39 @@ import { Coach, STEPS } from './Tutorial'
 import { isMuted, setMuted, sfx, startAmbience, type Sfx } from './sfx'
 
 const sign = (n: number) => (n > 0 ? `+${n}` : `${n}`)
-// Ícone de recurso: sprite do atlas quando existe, emoji como reserva.
-const RES_SPRITE: Partial<Record<Res, SpriteName>> = {
+// Ícone de cada recurso (atlas em public/ui).
+const RES_SPRITE: Record<Res, SpriteName> = {
   wood: 'logs', stone: 'stone', food: 'apple', iron: 'ingot', money: 'coin', knowledge: 'books', clay: 'clay', pottery: 'pottery',
   bronze: 'bronze', weapons: 'weapons', tools: 'tools', cloth: 'cloth', coal: 'coal', steel: 'steel', goods: 'goods',
+  oil: 'oilwell', electronics: 'electronics', cars: 'cars', batteries: 'batteries', tech: 'tech',
 }
-const ResIcon = ({ r, size = 16 }: { r: Res; size?: number }) =>
-  RES_SPRITE[r] ? <Sprite name={RES_SPRITE[r]} size={size} /> : <span className="emoji" style={{ fontSize: size * 0.8 }}>{RES[r].icon}</span>
+const ResIcon = ({ r, size = 16 }: { r: Res; size?: number }) => <Sprite name={RES_SPRITE[r]} size={size} />
 const Cost = ({ b }: { b: Partial<Record<Res, number>> }) => (
   <>{Object.entries(b).map(([r, v]) => <span key={r} className="chip"><ResIcon r={r as Res} />{v}</span>)}</>
 )
 
+// Ilustração da carta de evento por tipo.
+const EVENT_ART: Record<string, SpriteName> = {
+  seca: 'ev_drought', inverno: 'ev_drought', doenca: 'ev_drought', fartura: 'ev_festival', nascimentos: 'ev_festival', viajante: 'ev_festival',
+  incendio: 'ev_invasion', lobos: 'th_wolf', manada: 'cow', tempestade: 'ev_storm', rio_sujo: 'ev_pollution', protestos: 'ev_pollution',
+  tosse: 'ev_pollution', tribo: 'ev_trade', tribo2: 'ev_trade', silex: 'quarry',
+}
+
 // Arte das cartas (só interface).
-const CARD_SPRITE: Partial<Record<BuildingId | Link, SpriteName>> = {
-  farm: 'farm', field: 'field', manor: 'farm', lumber: 'forest', hut: 'hut', house: 'cottage', townhouse: 'townhouse', quarry: 'quarry',
-  mine: 'mine', fisher: 'boat', mill: 'windmill', stable: 'cow', tower: 'tower', bronzetower: 'bronzetower', stonetower: 'stonetower',
-  trail: 'trail', road: 'road', rail: 'rails', claypit: 'claypit', kiln: 'kiln', elder: 'elder', totem: 'totem',
-  scribe: 'scribe', foundry: 'foundry', market: 'market', smith: 'smith', temple: 'temple', barracks: 'barracks',
-  workshop: 'workshop', weaver: 'weaver', library: 'library', castle: 'castle', cathedral: 'cathedral',
-  coalmine: 'coalmine', powerplant: 'powerplant', steelworks: 'steelworks', factory: 'factory', tenement: 'tenement', park: 'park',
+const CARD_SPRITE: Record<BuildingId | Link, SpriteName> = {
+  hut: 'hut', house: 'cottage', townhouse: 'townhouse', tenement: 'tenement', apartment: 'apartment', skyscraper: 'skyscraper',
+  farm: 'farm', field: 'field', manor: 'manor', mechfarm: 'mechfarm', greenhouse: 'greenhouse', vertfarm: 'vertfarm',
+  lumber: 'forest', quarry: 'quarry', fisher: 'boat', claypit: 'claypit', kiln: 'kiln', elder: 'elder', totem: 'totem',
+  tower: 'tower', bronzetower: 'bronzetower', stonetower: 'stonetower', castle: 'castle', turret: 'turret', barracks: 'barracks',
+  scribe: 'scribe', library: 'library', foundry: 'foundry', market: 'market', stable: 'cow', mill: 'windmill',
+  mine: 'mine', smith: 'smith', temple: 'temple', workshop: 'workshop', weaver: 'weaver', cathedral: 'cathedral',
+  coalmine: 'coalmine', powerplant: 'powerplant', steelworks: 'steelworks', factory: 'factory', park: 'park',
+  oilwell: 'pumpjack', thermal: 'thermal', hydro: 'hydro', electronics: 'electronicsplant', carplant: 'carplant', hospital: 'hospital', stadium: 'stadium',
+  solar: 'solar', wind: 'wind', nuclear: 'nuclear', batteries: 'batteryplant', datacenter: 'datacenter', autofactory: 'autofactory',
+  logistics: 'logistics', urbanpark: 'urbanpark', landmark: 'landmark',
+  trail: 'trail', road: 'road', rail: 'rails', highway: 'highway',
 }
-// Emoji enquanto a arte da Moderna/Contemporânea não chega.
-const EMOJI: Partial<Record<BuildingId | Link, string>> = {
-  skyscraper: '🏙️', mechfarm: '🚜', greenhouse: '🪴', vertfarm: '🥬', highway: '🛣️', oilwell: '🛢️', thermal: '🏭', hydro: '💧', electronics: '🔌', carplant: '🚗', apartment: '🏢', hospital: '🏥',
-  stadium: '🏟️', turret: '🗼', solar: '☀️', wind: '🌬️', nuclear: '☢️', batteries: '🔋', datacenter: '💾', autofactory: '🤖',
-  logistics: '📦', urbanpark: '🌳', landmark: '🌆',
-}
-const Art = ({ id, size = 58 }: { id: BuildingId | Link; size?: number }) =>
-  CARD_SPRITE[id] ? <Sprite name={CARD_SPRITE[id]} size={size} /> : <span className="emoji" style={{ fontSize: size * 0.7 }}>{EMOJI[id]}</span>
+const Art = ({ id, size = 58 }: { id: BuildingId | Link; size?: number }) => <Sprite name={CARD_SPRITE[id]} size={size} />
 
 type Panel = null | 'trade' | 'log' | 'menu'
 
@@ -339,7 +344,7 @@ export function App() {
         <div className="stage" key={state.event}>
           <div className="pcard event">
             <header className="red">Evento</header>
-            <div className="art forest"><Sprite name={card.id === 'lobos' ? 'mountain' : 'forest'} size={110} /></div>
+            <div className="art forest"><Sprite name={EVENT_ART[card.id] ?? 'forest'} size={110} /></div>
             <h4>{card.title}</h4>
             <p>{card.text}</p>
             {card.options.map((o, i) => {
