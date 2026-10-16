@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest'
-import { ERAS } from './data'
+import { ERAS, TROOP_COST } from './data'
 import { EVENT_BY_ID } from './events'
-import { canChoose, eraGoals, endTurn, hiddenHexes, newGame, resolveEvent } from './game'
+import { canChoose, eraGoals, endTurn, hiddenHexes, newGame, recruit, resolveEvent } from './game'
 import { neutral, newMatchGame, normalize } from './match'
 
 test('fronteira neutra: assento 0 não explora rumo ao rival', () => {
@@ -41,4 +41,39 @@ test('save antigo sem campos novos é normalizado', () => {
   const old: any = newGame(1); delete old.troops; delete old.away; delete old.raids
   const s = normalize(old)
   expect([s.troops, s.away, s.raids]).toEqual([0, [], []])
+})
+
+// Partida online com Campo de guerra pronto, recursos e ✋ de sobra.
+const camp = () => {
+  const s = newMatchGame(5, 'coop', 0, false)
+  s.tiles['1,0'] = { terrain: 'plains', building: { id: 'warcamp', turnsLeft: 0, hp: 5 } }
+  s.pop = 4; s.actions = 6; s.res.food = 50; s.res.money = 50
+  return s
+}
+test('recrutar: −1 👤, +1 tropa, custa TROOP_COST e 1 ✋', () => {
+  const s = camp(), t = recruit(s)
+  expect([t.pop, t.troops, t.actions]).toEqual([s.pop - 1, 1, s.actions - 1])
+  expect(t.res.money).toBe(s.res.money - TROOP_COST.money!)
+  expect(t.res.food).toBe(s.res.food - TROOP_COST.food!)
+})
+test('recrutar exige Campo de guerra e deixa ao menos 1 👤', () => {
+  const semCampo = camp(); delete semCampo.tiles['1,0'].building
+  expect(() => recruit(semCampo)).toThrow()
+  expect(() => recruit({ ...camp(), pop: 1 })).toThrow()
+})
+test('fora de partida online não recruta', () => {
+  const solo: any = camp(); delete solo.match
+  expect(() => recruit(solo)).toThrow()
+})
+test('tropas comem 1 🍖 por turno', () => {
+  const sem = camp(), com = camp(); com.troops = 3
+  expect(endTurn(com).res.food).toBe(endTurn(sem).res.food - 3)
+})
+test('tropa em casa absorve o golpe no Centro e morre', () => {
+  const s = camp(); s.troops = 2
+  s.invaders = [{ id: 1, kind: 1, at: '1,0', hp: 3, atk: 2 }]
+  s.tiles['1,0'] = { terrain: 'plains' }
+  const t = endTurn(s)
+  expect(t.centerHp).toBe(s.centerHp)
+  expect(t.troops).toBe(1)
 })

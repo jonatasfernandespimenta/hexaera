@@ -41,7 +41,7 @@ const CARD_SPRITE: Record<BuildingId | Link, SpriteName> = {
   farm: 'farm', field: 'field', manor: 'manor', mechfarm: 'mechfarm', greenhouse: 'greenhouse', vertfarm: 'vertfarm',
   lumber: 'forest', quarry: 'quarry', fisher: 'boat', claypit: 'claypit', kiln: 'kiln', elder: 'elder', totem: 'totem',
   tower: 'tower', bronzetower: 'bronzetower', stonetower: 'stonetower', castle: 'castle', turret: 'turret', barracks: 'barracks',
-  scribe: 'scribe', library: 'library', foundry: 'foundry', market: 'market', stable: 'cow', mill: 'windmill',
+  scribe: 'scribe', library: 'library', foundry: 'foundry', market: 'market', stable: 'cow', mill: 'windmill', warcamp: 'barracks',
   mine: 'mine', smith: 'smith', temple: 'temple', workshop: 'workshop', weaver: 'weaver', cathedral: 'cathedral',
   coalmine: 'coalmine', powerplant: 'powerplant', steelworks: 'steelworks', factory: 'factory', park: 'park',
   oilwell: 'pumpjack', thermal: 'thermal', hydro: 'hydro', electronics: 'electronicsplant', carplant: 'carplant', hospital: 'hospital', stadium: 'stadium',
@@ -244,7 +244,7 @@ export function App() {
 
   // Mão em leque: cada carta gira e desce um pouco conforme a distância do meio.
   const links = (Object.keys(LINKS) as Link[]).filter(l => LINKS[l].era === tab && !LINKS[l].tile) // Ferrovia vira carta de construção
-  const builds = (Object.keys(BUILDINGS) as BuildingId[]).filter(id => BUILDINGS[id].era === tab)
+  const builds = (Object.keys(BUILDINGS) as BuildingId[]).filter(id => BUILDINGS[id].era === tab && (id !== 'warcamp' || !!state.match))
   const mid = (links.length + builds.length - 1) / 2
   const fan = (i: number) => ({ '--rot': `${(i - mid) * 2.2}deg`, '--drop': `${Math.abs(i - mid) ** 2 * 0.8}px` }) as React.CSSProperties
 

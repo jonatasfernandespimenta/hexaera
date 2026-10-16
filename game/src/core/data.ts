@@ -38,7 +38,7 @@ export const RES: Record<Res, { icon: string; name: string; era: number; price?:
 }
 
 export type BuildingId =
-  | 'hut' | 'farm' | 'lumber' | 'quarry' | 'fisher' | 'claypit' | 'kiln' | 'elder' | 'totem' | 'tower'
+  | 'hut' | 'farm' | 'lumber' | 'quarry' | 'fisher' | 'claypit' | 'kiln' | 'elder' | 'totem' | 'tower' | 'warcamp'
   | 'house' | 'field' | 'foundry' | 'stable' | 'scribe' | 'bronzetower' | 'market'
   | 'mine' | 'smith' | 'temple' | 'barracks' | 'townhouse' | 'stonetower'
   | 'workshop' | 'weaver' | 'mill' | 'library' | 'castle' | 'cathedral'
@@ -108,6 +108,7 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
   field: { name: 'Campo arado', cat: 'producao', era: 1, from: 'farm', desc: '+5 🍖', terrains: [], actions: 1, cost: { wood: 2, stone: 1 }, turns: 1, workers: 1, hp: 3, produces: { food: 5 } },
   scribe: { name: 'Escriba', cat: 'cultura', era: 1, from: 'elder', desc: '+2 📚', terrains: [], actions: 2, cost: { clay: 2, pottery: 2 }, turns: 2, workers: 1, hp: 3, produces: { knowledge: 2 } },
   bronzetower: { name: 'Torre de bronze', cat: 'defesa', era: 1, from: 'tower', desc: '2 dano, alcance 2', terrains: [], actions: 2, cost: { stone: 2, money: 30 }, turns: 2, workers: 0, hp: 6, tower: { damage: 2, range: 2 } },
+  warcamp: { name: 'Campo de guerra', cat: 'defesa', era: 1, desc: 'recruta tropas (partida online)', terrains: OPEN, actions: 3, cost: { wood: 5, stone: 3 }, turns: 2, workers: 1, hp: 5 },
   foundry: { name: 'Fundição', cat: 'industria', era: 1, desc: '+1 🔶', terrains: ['mountain'], actions: 3, cost: { wood: 4, stone: 3 }, turns: 2, workers: 2, hp: 4, produces: { bronze: 1 } },
   stable: { name: 'Estábulo', cat: 'producao', era: 1, desc: '+2 ✋', terrains: ['plains'], actions: 3, cost: { wood: 4, bronze: 1 }, turns: 2, workers: 1, hp: 3, actionsBonus: 2 },
   market: { name: 'Mercado', cat: 'comercio', era: 1, desc: 'comércio + contratos', terrains: ['plains'], actions: 3, cost: { wood: 5, pottery: 2 }, turns: 2, workers: 1, hp: 3, tradeVolume: 10 },
@@ -176,6 +177,7 @@ export const RING_COST = [0, 1, 2, 3, 5, 8, 13]
 
 export const CENTER_HP = 10 // + CENTER_HP_PER_ERA a cada era (o Centro evolui junto)
 export const CENTER_HP_PER_ERA = 5
+export const TROOP_COST: Bag = { food: 4, money: 6 } // recrutar 1 tropa (+1 ✋, 1 👤)
 export const HUNT_COST = 2 // ✋ para a tribo atacar um invasor
 export const EVENT_EVERY = 5 // turnos
 export const THREAT_FROM_TURN = 5

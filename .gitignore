@@ -7,3 +7,4 @@ dist/
 hook.cache.json
 .next/
 next-env.d.ts
+*.tsbuildinfo

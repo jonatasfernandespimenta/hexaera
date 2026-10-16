@@ -1,7 +1,7 @@
 import {
   BRIDGE_COST, BUILDINGS, CENTER_HP, CENTER_HP_PER_ERA, CLEAR_FOREST_WOOD, CONTRACT_EVERY, CONTRACT_OFFERS, CONTRACTS, ERAS,
   EVENT_EVERY, FOREST_CLEAN, HUNT_COST, LINKS, PRICE_EVERY, PRICE_STEP, REP_BONUS, RES, RING_COST, SELL_SPREAD, TERRAINS, THREAT_CHANCE,
-  THREAT_FROM_TURN, THREATS, type Bag, type BuildingId, type Category, type Link, type Res, type Terrain,
+  THREAT_FROM_TURN, THREATS, TROOP_COST, type Bag, type BuildingId, type Category, type Link, type Res, type Terrain,
 } from './data'
 import { EVENT_BY_ID, EVENTS, type Effect, type EventOption } from './events'
 import { distance, key, neighbors, parse, type Hex } from './hex'
@@ -343,7 +343,7 @@ export function pollutionDelta(s: State) {
   return sumOf(s, d => d.pollution) - forests * FOREST_CLEAN
 }
 
-export const eaten = (s: State) => Math.ceil(s.pop * modProduct(s, 'eatMult'))
+export const eaten = (s: State) => Math.ceil(s.pop * modProduct(s, 'eatMult')) + s.troops
 
 // Saldo previsto por turno (para a interface).
 export function income(s: State) {
@@ -512,6 +512,21 @@ export function demolish(prev: State, h: Hex): State {
   return s
 }
 
+// Recruta 1 tropa: exige partida online e Campo de guerra pronto com trabalhador; sempre sobra ≥ 1 👤.
+export function recruit(prev: State): State {
+  guard(prev)
+  if (!prev.match) throw new Error('Só há tropas em partida online.')
+  if (!staffed(prev).some(k => prev.tiles[k].building!.id === 'warcamp')) throw new Error('Precisa de um Campo de guerra funcionando.')
+  if (prev.pop < 2) throw new Error('Precisa deixar ao menos 1 👤.')
+  if (prev.actions < 1) throw new Error('Faltam ações: custa 1 ✋.')
+  const s = structuredClone(prev)
+  s.actions -= 1
+  s.pop -= 1
+  s.troops += 1
+  for (const [r, v] of Object.entries(TROOP_COST) as [Res, number][]) s.res[r] -= v
+  return s
+}
+
 // ---------- eventos ----------
 
 function eligible(s: State, id: string) {
@@ -654,6 +669,11 @@ function threats(s: State) {
       continue
     }
     if (distance(here) === 1) {
+      if (s.troops > 0) {
+        s.troops -= 1
+        log(s, '🛡 Uma tropa caiu defendendo o Centro.')
+        continue
+      }
       s.centerHp -= inv.atk
       log(s, tr('🔥 {0} atacam o Centro!', name))
       continue
