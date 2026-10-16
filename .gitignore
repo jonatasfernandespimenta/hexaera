@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.vitest/
+.DS_Store
+.obsidian/workspace*.json
+*.hook.cache.json
+hook.cache.json

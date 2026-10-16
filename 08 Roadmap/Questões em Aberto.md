@@ -1,0 +1,29 @@
+---
+tags: [roadmap, decisoes]
+---
+# Questões em Aberto
+
+- [ ] **Nome final** — Hexaera vs Eras & Embers. Ver [[Nome do Jogo]].
+- [x] ~~**Coop online ou só local?**~~ → local (hot-seat).
+- [ ] **Comércio entra no core ou é opcional?** (Marcado como "talvez" na ideia original.)
+- [ ] **Modelo mobile**: premium + DLC ou F2P cosmético?
+- [x] ~~**Multiplayer**~~ → solo + coop em todas as versões.
+- [x] ~~**Como funciona o coop?**~~ → cada jogador com sua cidade, trocas entre elas. Ver [[Cooperativo]].
+- [ ] **Combate**: determinístico puro ou com dado?
+- [ ] **Escala de números**: valores pequenos (board-friendly) também no digital?
+- [ ] **Quantos recursos no total?** Meta: ≤ 20.
+- [x] ~~**Turno = dia**~~ → turno abstrato, 30–50 por era, calendário acelerado nas eras antigas.
+- [x] ~~**Logística**~~ → estoque global; conexão ao Centro como requisito. Ver [[Produção e Logística]].
+- [ ] **Balanceamento** de todos os valores 🧪.
+- [x] ~~**Construções 3D**~~ → miniaturas 3D pixel/voxel. Ver [[Direção Visual]].
+- [x] ~~**Construções como cartas na mão?**~~ → Digital: todas disponíveis, cartas = UI, mapa infinito. Tabuleiro: estoque limitado de miniaturas + cartas de referência, mapa limitado. Ver [[Construções#Disponibilidade (decidido)]].
+- [ ] **Quantas miniaturas de cada tipo** no tabuleiro (balanceamento do estoque).
+- [x] ~~Hex com várias construções?~~ → 1 construção principal, diorama decorativo por nível.
+- [x] ~~Origem do dinheiro~~ → sem 💰 na Primitiva (troca); imposto por casa do Bronze em diante, modulado por 😊.
+- [x] ~~Crescimento populacional~~ → via casas e upgrades.
+- [x] ~~Limite de armazenamento~~ → sem limite.
+- [x] ~~Invasores/soldados~~ → anúncio 1 turno antes, hex de borda aleatório; soldados se movem.
+- [x] ~~Redução de poluição~~ → −1 ☁️/turno por floresta e parque.
+- [x] ~~Ícones~~ → tabela em [[Direção Visual#Ícones (decidido)]].
+- [x] ~~Onde ficam as cidades no coop?~~ → mesmo mapa, separadas por fronteira (rio ou tiles cinza neutros). Ver [[Cooperativo#Mapa compartilhado (decidido)]].
+- [x] ~~Invasores interceptam carga?~~ → sim; incentiva torres ao longo das rotas.

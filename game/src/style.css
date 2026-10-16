@@ -1,0 +1,261 @@
+:root {
+  --wood: #2a1a0e;
+  --wood-2: #3a2414;
+  --wood-edge: #8a5a2e;
+  --wood-dark: #120a04;
+  --parch: #f1e2bc;
+  --parch-2: #e4cf9c;
+  --ink: #3a2412;
+  --gold: #f2c45a;
+  --green: #4f7a2a;
+  --red: #a8332a;
+  --blue: #2f5a9a;
+  --purple: #5a3a8a;
+  --outline: 0 2px 0 #000, 2px 0 0 #000, -2px 0 0 #000, 0 -2px 0 #000;
+}
+* { box-sizing: border-box; }
+html, body, #root { margin: 0; height: 100%; background: #1a0f08; overflow: hidden; }
+body { font-family: 'Tiny5', monospace; color: #f4e6c4; user-select: none; }
+canvas { display: block; }
+button { font: inherit; cursor: pointer; }
+.pos { color: #8ee36a; }
+.neg { color: #ff7a5c; }
+.muted { opacity: 0.7; font-size: 12px; margin: 6px 4px 0; }
+
+/* luz de lampião nas bordas */
+.vignette {
+  position: fixed; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 45%, transparent 45%, #0a0503b0 100%),
+    radial-gradient(circle at 0% 0%, #ffb35a30, transparent 35%);
+}
+
+/* moldura de madeira escura com borda dourada */
+.frame {
+  background: linear-gradient(#2e1c10, #1e120a);
+  border: 3px solid var(--wood-edge);
+  outline: 3px solid var(--wood-dark);
+  box-shadow: inset 0 0 0 2px #4a2e18, 0 6px 0 #0008;
+  padding: 8px 14px;
+  text-shadow: var(--outline);
+}
+
+/* ---------- barra de recursos ---------- */
+.bar {
+  position: fixed; z-index: 60; top: 12px; left: 50%; transform: translateX(-50%); max-width: calc(100vw - 600px); flex-wrap: wrap; justify-content: center;
+  display: flex; gap: 4px; padding: 6px 10px; white-space: nowrap;
+}
+.stat { display: flex; align-items: center; gap: 5px; padding: 0 7px; border-right: 2px solid #4a2e18; }
+.stat:last-child { border-right: 0; }
+.stat i { font-style: normal; font-size: 26px; text-shadow: none; filter: drop-shadow(0 2px 0 #000); }
+.stat > span { display: flex; flex-direction: column; line-height: 1; }
+.stat b { font-size: 20px; font-weight: 600; }
+.stat small { font-size: 14px; margin-top: 3px; }
+
+/* ---------- turno ---------- */
+.turn { position: fixed; top: 12px; right: 16px; display: flex; gap: 14px; align-items: stretch; }
+.turnbox { display: flex; align-items: center; gap: 10px; padding: 6px 14px 6px 10px; }
+.turnbox .sun { font-size: 34px; text-shadow: none; filter: drop-shadow(0 0 6px #ffcf4a); }
+.turnbox b { display: block; font-size: 20px; }
+.turnbox small { display: block; font-size: 13px; opacity: 0.85; }
+.hp { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 13px; }
+.hp i { display: block; width: 90px; height: 10px; background: #2a1a10; border: 2px solid #b4915c; }
+.hp b { display: block; height: 100%; background: #e0502a; transform-origin: left; transition: transform 0.3s; }
+.endturn {
+  background: linear-gradient(#c0442e, #8e2a1c); color: #fff4dc; font-size: 26px; font-weight: 600; padding: 0 30px;
+  border: 3px solid #e2734f; outline: 3px solid #3a0f06; box-shadow: inset 0 -4px 0 #6a1a10, 0 6px 0 #0009;
+  text-shadow: var(--outline);
+}
+.endturn:hover:not(:disabled) { filter: brightness(1.12); }
+.endturn:active { transform: translateY(3px); }
+.endturn:disabled { opacity: 0.5; cursor: default; }
+
+/* ---------- cartas de pergaminho (evento, contrato, objetivo) ---------- */
+.side { position: fixed; top: 14px; left: 16px; width: 210px; display: flex; flex-direction: column; gap: 14px; }
+.pcard {
+  background: linear-gradient(var(--parch), var(--parch-2)); color: var(--ink);
+  border: 4px solid var(--wood-edge); outline: 3px solid var(--wood-dark);
+  box-shadow: inset 0 0 0 2px #fff6dc80, 0 8px 0 #0009; padding: 0 0 10px; text-align: center;
+}
+.pcard header {
+  margin: 6px 6px 8px; padding: 4px; color: #fff4dc; font-weight: 600; font-size: 17px; text-shadow: var(--outline);
+  border: 2px solid #0006;
+}
+.pcard header.red { background: #6b2a1e; }
+.pcard header.blue { background: var(--blue); }
+.pcard header.gold { background: #8a6420; }
+.pcard .art {
+  margin: 0 10px 6px; height: 64px; display: grid; place-items: center; font-size: 42px;
+  border: 2px solid #8a5a2e; background: linear-gradient(#9fd0f0, #6fae4a);
+}
+.pcard .art.forest { background: linear-gradient(#4f8a3a, #2f5a22); }
+.pcard h4 { margin: 4px 8px; font-size: 16px; }
+.pcard p { margin: 2px 10px 8px; font-size: 13px; text-align: left; line-height: 1.25; }
+.pcard .reward { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.pcard .goal { font-size: 14px; text-align: left; margin: 2px 10px; display: flex; align-items: center; gap: 4px; }
+.pcard .goal b { margin-left: auto; }
+.pcard .goal .check { width: 14px; }
+.pcard .goal.ok { color: #2f6a1a; }
+.opt {
+  display: block; width: calc(100% - 20px); margin: 6px 10px 0; padding: 6px 8px; text-align: left;
+  color: #fff4dc; border: 2px solid #0008; text-shadow: var(--outline);
+}
+.opt.green { background: linear-gradient(#5f9a32, #3f7022); }
+.opt.dark { background: linear-gradient(#3a3028, #241c16); }
+.opt span { display: block; font-size: 12px; opacity: 0.85; }
+.opt:hover:not(:disabled) { filter: brightness(1.15); }
+.opt:disabled { opacity: 0.45; cursor: default; }
+.pulse { animation: pulse 1.4s ease-in-out infinite; }
+@keyframes pulse { 50% { box-shadow: inset 0 0 0 2px #fff6dc80, 0 8px 0 #0009, 0 0 24px var(--gold); } }
+
+/* Evento: a carta sai do canto do baralho (esquerda), gira e para no meio da tela; o fundo escurece. */
+.stage {
+  position: fixed; inset: 0; z-index: 30; display: grid; place-items: center;
+  background: radial-gradient(circle, #0006, #000c); animation: dim 0.35s ease-out;
+}
+.stage .pcard { width: 300px; animation: deal 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
+.stage .pcard .art { height: 120px; }
+.stage .pcard h4 { font-size: 22px; }
+.stage .pcard p { font-size: 15px; text-align: center; }
+@keyframes dim { from { opacity: 0; } }
+@keyframes deal { from { transform: translate(-42vw, -30vh) rotate(-25deg) scale(0.4); opacity: 0; } 60% { opacity: 1; } }
+
+/* ---------- direita: minimapa e botões redondos ---------- */
+.right { position: fixed; top: 96px; right: 16px; display: flex; flex-direction: column; align-items: flex-end; gap: 14px; }
+.minimap {
+  width: 200px; height: 190px; padding: 10px;
+  background: linear-gradient(var(--parch), var(--parch-2));
+  border: 4px solid var(--wood-edge); outline: 3px solid var(--wood-dark); box-shadow: 0 8px 0 #0009;
+}
+.minimap svg { width: 100%; height: 100%; }
+.roundbtns { display: flex; flex-direction: column; gap: 10px; margin-right: 6px; }
+.round {
+  width: 58px; height: 58px; border-radius: 50%; font-size: 26px;
+  background: radial-gradient(#5a3a20, #2a1a0e); border: 3px solid var(--wood-edge); outline: 3px solid var(--wood-dark);
+  box-shadow: 0 5px 0 #0009;
+}
+.round.on { border-color: var(--gold); box-shadow: 0 5px 0 #0009, 0 0 14px var(--gold); }
+.round:hover { filter: brightness(1.2); }
+.popover { position: fixed; right: 92px; top: 330px; width: 300px; z-index: 70; font-size: 14px; line-height: 1.4; }
+.popover h3, .trade h3 { margin: 4px 0 8px; font-size: 16px; color: var(--gold); }
+
+/* ---------- mão de cartas (leque) ---------- */
+.dock { position: fixed; bottom: 6px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px; max-width: calc(100vw - 480px); }
+.tabs { display: flex; gap: 4px; position: relative; z-index: 1; }
+.tabs button { background: var(--wood); color: #f4e6c4; border: 2px solid var(--wood-edge); padding: 2px 14px; font-size: 14px; text-shadow: var(--outline); }
+.tabs button.sel { border-color: var(--gold); color: var(--gold); }
+.hand { display: flex; justify-content: center; padding: 26px 30px 0; position: relative; z-index: 2; }
+.card {
+  --rot: 0deg; --drop: 0px;
+  position: relative; flex: 0 0 118px; width: 118px; height: 184px; margin: 0 -3px; padding: 0 0 4px;
+  display: flex; flex-direction: column; text-align: center; color: var(--ink);
+  background:
+    radial-gradient(ellipse at 50% 35%, #fff6dc 0%, transparent 70%),
+    repeating-linear-gradient(0deg, #0000 0 3px, #8a5a2e08 3px 4px),
+    linear-gradient(var(--parch), var(--parch-2));
+  border: 3px solid #6b4526; border-radius: 7px;
+  box-shadow: inset 0 0 0 2px #f9edcc, inset 0 0 0 4px #b4915c, 0 0 0 2px #1a0e06, 0 8px 10px #000a;
+  transform-origin: 50% 120%;
+  transform: translateY(var(--drop)) rotate(var(--rot));
+  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s, filter 0.2s;
+  overflow: hidden; z-index: 1;
+}
+.card:hover, .card.sel {
+  transform: translateY(-34px) rotate(0deg) scale(1.25);
+  z-index: 20;
+  box-shadow: inset 0 0 0 2px #f9edcc, inset 0 0 0 4px #b4915c, 0 0 0 2px #1a0e06, 0 18px 26px #000c;
+}
+.card.sel { box-shadow: inset 0 0 0 2px #f9edcc, inset 0 0 0 4px #b4915c, 0 0 0 3px var(--gold), 0 0 26px var(--gold); }
+/* brilho que atravessa a carta no hover */
+.card::after {
+  content: ''; position: absolute; inset: -40% -60%; pointer-events: none;
+  background: linear-gradient(105deg, transparent 42%, #fff8 50%, transparent 58%);
+  transform: translateX(-100%); opacity: 0;
+}
+.card:hover::after { animation: shine 0.7s ease-out; }
+@keyframes shine { 0% { transform: translateX(-60%); opacity: 1; } 100% { transform: translateX(60%); opacity: 0; } }
+.card header {
+  margin: 6px 5px 0; padding: 2px 1px 3px; color: #fff8e4; font-weight: 600; font-size: 12px; line-height: 1.35;
+  text-shadow: 0 1px 0 #000, 1px 0 0 #000, -1px 0 0 #000, 0 -1px 0 #000;
+  background: var(--green); border: 2px solid #0006; border-radius: 3px; white-space: nowrap; letter-spacing: -0.2px;
+}
+.card.moradia header { background: #8a5a2e; }
+.card.industria header { background: #a8552a; }
+.card.cultura header { background: #6a3fa0; }
+.card.defesa header { background: #8a2a2a; }
+.card.comercio header { background: #b8902a; }
+.card.infra header { background: var(--purple); }
+.card .art {
+  margin: 4px 8px 3px; height: 58px; display: grid; place-items: center; font-size: 38px;
+  background: radial-gradient(circle at 50% 60%, #fffbe8, #e8d6a4); border: 2px solid #b4915c; border-radius: 3px;
+}
+.card p { margin: 0 6px 2px; font-size: 12px; line-height: 1.15; }
+.card .req { font-size: 10px; opacity: 0.65; }
+.card footer { margin: auto 4px 0; border-top: 2px dashed #b4915c; padding: 3px 0 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 1px; }
+.chip { display: inline-flex; align-items: center; gap: 1px; font-size: 12px; padding: 0 3px; white-space: nowrap; }
+.card.off { filter: saturate(0.35) brightness(0.75); }
+.card.off:hover { filter: saturate(0.6) brightness(0.9); }
+.card.debt footer { color: #b03a2a; }
+
+/* ---------- avisos ---------- */
+.hint { position: fixed; bottom: 215px; left: 50%; transform: translateX(-50%); font-size: 15px; }
+.toast { position: fixed; top: 88px; left: 50%; transform: translateX(-50%); color: #ffb39c; font-size: 16px; z-index: 80; }
+.news { position: fixed; top: 88px; left: 50%; transform: translateX(-50%); font-size: 15px; z-index: 80; animation: fade 3.5s forwards; }
+@keyframes fade { 80% { opacity: 1; } 100% { opacity: 0; } }
+
+/* rótulos sobre o tabuleiro */
+.tip {
+  background: var(--wood); border: 2px solid var(--wood-edge); padding: 3px 8px;
+  font-family: 'Tiny5', monospace; font-size: 14px; color: #f4e6c4; white-space: nowrap; pointer-events: none;
+  text-shadow: 0 1px 0 #000;
+}
+.tip.bad { color: #ff8f73; }
+.tip.warn { color: #ffd34d; border-color: #b8322a; }
+
+.over { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: #000a; }
+.pcard.big { width: 360px; }
+.pcard.big h2 { margin: 10px 0 6px; }
+.pcard.big p { text-align: center; }
+
+/* ---------- mercado ---------- */
+.trade { position: fixed; top: 96px; right: 92px; width: 360px; max-height: calc(100vh - 340px); overflow-y: auto; z-index: 70; font-size: 14px; }
+.trade header { display: flex; justify-content: space-between; align-items: center; }
+.trade .x { background: none; border: none; color: #f4e6c4; font-size: 16px; }
+.trade table { width: 100%; border-collapse: collapse; }
+.trade td { padding: 2px 4px; }
+.trade td button, .contract button { background: #4a2e1a; color: #f4e6c4; border: 2px solid var(--wood-edge); font-size: 12px; padding: 2px 6px; text-shadow: var(--outline); }
+.contract { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; border: 2px dashed var(--wood-edge); padding: 6px; margin-bottom: 6px; }
+.contract small { grid-column: 1; margin: 0; }
+.contract button { grid-column: 2; grid-row: 1 / span 3; align-self: center; }
+
+/* sprites do atlas */
+.sprite { display: inline-grid; place-items: center; vertical-align: middle; flex: none; }
+.sprite > span { display: block; background-repeat: no-repeat; image-rendering: pixelated; filter: drop-shadow(0 2px 0 #0006); }
+
+/* Contrato: prazo em destaque no canto da arte; dois botões lado a lado. */
+.pcard .art { position: relative; }
+.timer {
+  position: absolute; top: 4px; right: 4px; padding: 2px 6px; font-size: 14px; color: #fff4dc;
+  background: #2a1a10d0; border: 2px solid #b4915c; text-shadow: var(--outline);
+}
+.timer.urgent { background: #8e2a1c; border-color: #ffb08a; animation: pulse 1s ease-in-out infinite; }
+.optrow { display: flex; gap: 6px; margin: 0 10px 8px; }
+.optrow .opt { flex: 1; margin: 0; }
+.emoji { line-height: 1; display: inline-block; }
+
+/* ---------- tela inicial ---------- */
+.title { position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle, #0004, #000b); }
+.title h1 { margin: 0; font-size: clamp(56px, 11vw, 110px); color: var(--gold); letter-spacing: 4px; text-shadow: 0 6px 0 #5a3a10, var(--outline), 0 0 40px #ffb35a80; animation: dim 1.2s ease-out; }
+.title > p { margin: 4px 0 26px; font-size: 20px; text-shadow: var(--outline); opacity: 0.9; }
+.pcard.menu { width: min(320px, calc(100vw - 32px)); padding-top: 4px; }
+.pcard.menu .opt { padding: 10px 12px; }
+.pcard.menu .opt b { font-size: 18px; }
+
+/* ---------- tutorial ---------- */
+.coach { position: fixed; right: 16px; bottom: 16px; width: 228px; z-index: 95; animation: deal 0.45s cubic-bezier(0.22, 1, 0.36, 1); }
+.coach header { display: flex; justify-content: space-between; align-items: baseline; padding: 4px 8px; }
+.coach header small { font-size: 12px; opacity: 0.85; }
+.coach p { font-size: 14px; }
+.coach .muted { text-align: center; color: #6a3a10; opacity: 1; }
+.coach .skip { display: block; margin: 8px auto 0; background: none; border: 0; color: var(--ink); opacity: 0.6; font-size: 12px; text-decoration: underline; }
+.tut-focus { animation: focus 1.2s ease-in-out infinite !important; z-index: 90; }
+@keyframes focus { 50% { outline-color: var(--gold); box-shadow: 0 0 0 3px var(--gold), 0 0 28px var(--gold); } }
