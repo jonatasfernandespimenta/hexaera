@@ -34,7 +34,7 @@ status: decidido
 ## Mapa compartilhado (decidido)
 - As duas cidades ficam **no mesmo mapa**, com os Centros a **10 hex** de distância (`RIVAL_DISTANCE`). Cada cidade usa coordenadas locais (Centro em 0,0) com seed própria; na tela, a cidade do outro aparece deslocada, só leitura, a partir do último estado que ele subiu.
 - Entre elas existe uma **faixa neutra** de **tiles acinzentados**: hexes a até 2 passos de ficarem equidistantes dos dois Centros **não podem ser explorados**.
-- Cada território tem **identidade visual**: borda dos tiles e estandarte do Centro na cor do jogador.
+- Cada território tem **identidade visual**: borda dos tiles e estandarte do Centro na cor do jogador (planejado 🧪).
 - Para os outros lados, cada cidade cresce livremente (digital) ou até acabar sua pilha de tiles (físico).
 
 ## Transporte entre cidades (construído)

@@ -26,6 +26,6 @@ tags: [roadmap, decisoes]
 - [x] ~~Redução de poluição~~ → −1 ☁️/turno por floresta e parque.
 - [x] ~~Ícones~~ → tabela em [[Direção Visual#Ícones (decidido)]].
 - [x] ~~Onde ficam as cidades no coop?~~ → mesmo mapa, separadas por fronteira (rio ou tiles cinza neutros). Ver [[Cooperativo#Mapa compartilhado (decidido)]].
-- [x] ~~Invasores interceptam carga?~~ → sim; incentiva torres ao longo das rotas.
+- [x] ~~Invasores interceptam carga?~~ → sim; incentiva torres ao longo das rotas (ainda não implementado, ver [[Cooperativo#Ainda não implementado]]).
 - [ ] **Ritmo rápido com humanos** 🧪 — `abundance 5`, `pace 0.4` calibrados só com o bot (alvo 60–80 turnos). Falta playtest. Ver [[Versus#Ritmo rápido]].
 - [ ] **Coop: interceptação, contratos compartilhados, eventos de coop e infra na fronteira** — não implementados. Ver [[Cooperativo#Ainda não implementado]].

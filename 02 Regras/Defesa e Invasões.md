@@ -34,10 +34,10 @@ Ao entrar num hex com construção (não defensiva): causa ⚔ de dano; constru�
 | Torreta | Moderna | 6 dano, alcance 3, exige ⚡ | 🔩 + ⚡ |
 
 ## Movimento de unidades (decidido)
-Soldados e trabalhadores em viagem andam **1 hex por turno** a pé. Cavalo, carroça e trem aumentam a velocidade — ver tabela em [[Cooperativo#Transporte entre cidades (decidido)]]. Dar a ordem de movimento não custa ✋.
+Soldados e trabalhadores em viagem andam **1 hex por turno** a pé. Cavalo, carroça e trem aumentam a velocidade — ver tabela em [[Cooperativo#Transporte entre cidades (construído)]]. Dar a ordem de movimento não custa ✋.
 
 ## Rotas comerciais
-No [[Cooperativo]], invasores podem **interceptar trabalhadores e cargas** em viagem. Ver [[Cooperativo#Interceptação (decidido)]].
+No [[Cooperativo]], a ideia é que invasores possam **interceptar trabalhadores e cargas** em viagem (**ainda não implementado**; hoje as comitivas chegam sempre). Ver [[Cooperativo#Ainda não implementado]].
 
 ## Armamentos
 Soldados e torres exigem **🗡 armas** (Ferreiro). Sem ferreiro, sem exército. Armas evoluem por era (lanças → espadas → mosquetes → fuzis…), mas mantêm-se como **um recurso só** por simplicidade.
