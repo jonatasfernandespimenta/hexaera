@@ -16,6 +16,7 @@ const ONLINE_MS = 10_000
 const ALFA = 'abcdefghijklmnopqrstuvwxyz0123456789'
 const kMeta = (id: string) => `m:${id}`
 const kSeat = (id: string, s: 0 | 1) => `m:${id}:s${s}`
+const kSeen = (id: string, s: 0 | 1) => `m:${id}:s${s}:seen` // chave própria: ver a partida nunca reescreve o assento
 
 const newSeat = (): SeatRec => ({ token: crypto.randomUUID(), turn: 0, state: null, sent: [], votes: [], seen: Date.now() })
 
@@ -34,6 +35,7 @@ export async function createMatch(st: Store, o: { mode: Mode; fast: boolean; tim
     const meta: Meta = { id, mode: o.mode, fast: !!o.fast, timer: o.timer, seed: Math.floor(Math.random() * 2 ** 31), names: [name, null] }
     if (!(await st.setnx(kMeta(id), meta))) continue
     await st.set(kSeat(id, 0), rec)
+    await st.set(kSeen(id, 0), Date.now())
     return { id, seat: 0 as const, token: rec.token }
   }
   throw new HttpError(500, 'Não foi possível criar a partida.')
@@ -50,6 +52,7 @@ export async function joinMatch(st: Store, id: string, name: string) {
   const meta = await getMeta(st, id)
   const rec = newSeat()
   if (!(await st.setnx(kSeat(id, 1), rec))) throw new HttpError(409, 'Partida cheia.')
+  await st.set(kSeen(id, 1), Date.now())
   meta.names[1] = n
   await st.set(kMeta(id), meta)
   return { seat: 1 as const, token: rec.token }
@@ -57,7 +60,9 @@ export async function joinMatch(st: Store, id: string, name: string) {
 
 async function auth(st: Store, id: string, token: unknown) {
   const meta = await getMeta(st, id)
-  const [a, b] = await Promise.all([st.get<SeatRec>(kSeat(id, 0)), st.get<SeatRec>(kSeat(id, 1))])
+  const [a, b, sa, sb] = await Promise.all([st.get<SeatRec>(kSeat(id, 0)), st.get<SeatRec>(kSeat(id, 1)), st.get<number>(kSeen(id, 0)), st.get<number>(kSeen(id, 1))])
+  if (a) a.seen = sa ?? 0
+  if (b) b.seen = sb ?? 0
   const recs = [a, b]
   const seat = typeof token === 'string' && token ? ([0, 1] as const).find(s => recs[s]?.token === token) : undefined
   if (seat === undefined) throw new HttpError(403, 'Token inválido.')
@@ -67,7 +72,7 @@ async function auth(st: Store, id: string, token: unknown) {
 export async function viewMatch(st: Store, id: string, token: string) {
   const { meta, seat, me, rival } = await auth(st, id, token)
   me.seen = Date.now()
-  await st.set(kSeat(id, seat), me)
+  await st.set(kSeen(id, seat), me.seen)
   let r: RivalView | null = null
   if (rival) {
     const { token: _t, ...pub } = rival
@@ -83,7 +88,6 @@ export async function submitTurn(st: Store, id: string, token: string, b: { turn
   me.turn = b.turn
   me.sent.push(...b.sent)
   if (b.vote) me.votes.push(b.turn)
-  me.seen = Date.now()
   await st.set(kSeat(id, seat), me)
 }
 

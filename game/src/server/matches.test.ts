@@ -61,3 +61,19 @@ test('entradas inválidas dão 400', async () => {
   const c = await createMatch(st, { mode: 'versus', fast: true, timer: 0, name: ' ' + 'x'.repeat(30) })
   expect((await viewMatch(st, c.id, c.token)).meta.names[0]).toHaveLength(20)
 })
+
+test('ver a partida durante um envio não apaga o envio', async () => {
+  const base = st
+  let slow = true // só a primeira leitura do assento 0 (a da visualização) demora
+  const delayed: Store = { ...base, async get<T>(k: string) {
+    const v = await base.get<T>(k)
+    if (slow && k === `m:${id}:s0`) { slow = false; await new Promise(r => setTimeout(r, 30)) }
+    return v
+  } }
+  st = delayed
+  await Promise.all([viewMatch(st, id, t0), submitTurn(st, id, t0, { turn: 1, sent: [a], vote: true })])
+  const v = await viewMatch(st, id, t0)
+  expect(v.me.turn).toBe(1)
+  expect(v.me.sent).toEqual([a])
+  expect(v.me.votes).toEqual([1])
+})
