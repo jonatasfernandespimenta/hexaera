@@ -58,3 +58,10 @@ Para não virar contabilidade no físico, a produção é mantida em **trilhas d
 
 ## Interrupções
 Infra destruída por invasores ou eventos **desconecta** tudo que dependia dela — a produção cai pela metade até reparar. Isso conecta logística com [[Defesa e Invasões]].
+
+
+## Ferrovia ocupa um hex ✅ (2026-10-16)
+Diferente de trilha e estrada (que vão na **borda**), a **Ferrovia é uma peça que ocupa o hex inteiro** (3 ✋ + 2 🔩 + 20 💰; nada mais cabe nele).
+- Hexes de Ferrovia vizinhos formam uma **rede**. Se a rede **encosta no Centro** (algum trilho no anel 1), **todo hex vizinho da rede** fica ligado por ferrovia — e isso também vale como estrada e trilha.
+- O trilho se desenha sozinho (**auto-conexão**): liga nos trilhos vizinhos e no Centro; 2 pontas em ângulo viram **curva**, 3+ viram entroncamento, 1 ponta tem para-choque.
+- Rodovia (Moderna) continua sendo borda e vale como ferrovia.

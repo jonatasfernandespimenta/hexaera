@@ -137,7 +137,15 @@ export function linked(s: State): Record<Link, Set<string>> {
     }
     return seen
   }
-  return { trail: bfs(1), road: bfs(2), rail: bfs(3), highway: bfs(4) }
+  // Rede de trilhos (hexes de Ferrovia prontos) que encosta no Centro: ela e seus vizinhos ficam ligados por ferrovia.
+  const rails = Object.keys(s.tiles).filter(k => done(s.tiles[k]) && s.tiles[k].building!.id === 'railway')
+  const net = new Set(rails.filter(k => distance(parse(k)) === 1))
+  for (const queue = [...net]; queue.length;)
+    for (const n of neighbors(parse(queue.shift()!)).map(key))
+      if (rails.includes(n) && !net.has(n)) { net.add(n); queue.push(n) }
+  const byRail = new Set([...net].flatMap(k => [k, ...neighbors(parse(k)).map(key)]))
+  const plus = (a: Set<string>) => new Set([...a, ...byRail])
+  return { trail: plus(bfs(1)), road: plus(bfs(2)), rail: plus(bfs(3)), highway: bfs(4) }
 }
 
 // Custo de construir/melhorar a conexão de uma borda. Montanha dobra; Rio exige ponte (só na primeira vez).
@@ -154,6 +162,7 @@ export function linkCost(s: State, a: Hex, b: Hex, kind: Link): { actions: numbe
 }
 
 export function canLink(s: State, a: Hex, b: Hex, kind: Link): string | null {
+  if (LINKS[kind].tile) return `${LINKS[kind].name} ocupa um hex inteiro: use a carta de construção.`
   if (LINKS[kind].era > s.era) return `${LINKS[kind].name} é da Era ${ERAS[LINKS[kind].era].name}.`
   if (!s.tiles[key(a)] || !s.tiles[key(b)]) return 'Os dois hexes precisam estar revelados.'
   if (distance(a, b) !== 1) return 'Só entre hexes vizinhos.'
@@ -431,6 +440,24 @@ export function build(prev: State, h: Hex, id: BuildingId): State {
     s.res.wood += CLEAR_FOREST_WOOD
   }
   t.building = { id, turnsLeft: def.turns, hp: def.hp, ...(up && { up }) }
+  return s
+}
+
+// Demolir: o hex fica livre e volta metade do custo (arredonda para baixo). Moradores sem casa vão embora.
+export const DEMOLISH_COST = 1
+export function demolish(prev: State, h: Hex): State {
+  guard(prev)
+  const t = prev.tiles[key(h)]
+  if (!t?.building) throw new Error('Não há construção aqui.')
+  if (prev.actions < DEMOLISH_COST) throw new Error(`Faltam ações: demolir custa ${DEMOLISH_COST} ✋.`)
+  const s = structuredClone(prev)
+  const def = BUILDINGS[t.building.id]
+  s.actions -= DEMOLISH_COST
+  for (const [r, v] of Object.entries(def.cost) as [Res, number][]) s.res[r] += Math.floor(v / 2)
+  delete s.tiles[key(h)].building
+  const gone = s.pop - Math.min(s.pop, housing(s))
+  s.pop -= gone
+  log(s, `${def.name} demolida.${gone ? ` ${gone} 👤 partiram sem casa.` : ''}`)
   return s
 }
 

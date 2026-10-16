@@ -64,17 +64,27 @@ function connect(s: State): State | null {
     if (!b || b.turnsLeft > 0 || !offGrid(s, k, links)) continue
     const need: Link = BUILDINGS[b.id].link ?? 'trail'
     if (LINKS[need].era > s.era) continue
+    // Ferrovia ocupa hex: o caminho só passa por hex livre ou que já é trilho.
+    const tile = LINKS[need].tile
+    const ok = (v: string) => !tile || s.tiles[v].building?.id === tile || !canPlace(s, parse(v), tile)
     const prev = new Map<string, string>([[k, k]])
     const queue = [k]
     let end: string | null = null
     while (queue.length && !end) {
       const u = queue.shift()!
       for (const v of neighbors(parse(u)).map(key)) {
-        if (prev.has(v) || !s.tiles[v] || v === '0,0') continue
+        if (prev.has(v) || !s.tiles[v] || v === '0,0' || !ok(v)) continue
         prev.set(v, u)
         if (distance(parse(v)) === 1) { end = v; break }
         queue.push(v)
       }
+    }
+    if (tile) {
+      // Assenta trilho a partir do Centro em direção à construção.
+      for (let v = end; v && v !== k; v = prev.get(v)!)
+        if (s.tiles[v].building?.id !== tile) return !canPlace(s, parse(v), tile) && fits(s, BUILDINGS[tile].cost) && s.actions >= BUILDINGS[tile].actions
+          ? build(s, parse(v), tile) : null
+      continue
     }
     for (let v = end; v && v !== k; v = prev.get(v)!) {
       const a = parse(v), c = parse(prev.get(v)!)

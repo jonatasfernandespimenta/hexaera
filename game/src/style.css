@@ -189,6 +189,7 @@ button { font: inherit; cursor: pointer; }
 .card.cultura header { background: #6a3fa0; }
 .card.defesa header { background: #8a2a2a; }
 .card.comercio header { background: #b8902a; }
+.card.transporte header { background: var(--purple); }
 .card.infra header { background: var(--purple); }
 .card .art {
   margin: 4px 8px 3px; height: 58px; display: grid; place-items: center; font-size: 38px;

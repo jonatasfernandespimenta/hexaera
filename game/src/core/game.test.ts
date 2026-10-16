@@ -1,9 +1,9 @@
 import { expect, test } from 'vitest'
 import {
-  abandon, accept, advanceEra, build, decline, eraGoals, housing, idle, keepPlaying, maxActions, buildLink, deliver, endTurn, hunt, offGrid, staffed, stopped, trade, linkCost, run, pollutionDelta, explore, exploreCost, happiness, hiddenHexes, newGame, production, resolveEvent, terrainAt,
+  abandon, accept, advanceEra, build, decline, demolish, eraGoals, housing, idle, keepPlaying, maxActions, buildLink, deliver, endTurn, hunt, offGrid, staffed, stopped, trade, linkCost, run, pollutionDelta, explore, exploreCost, happiness, hiddenHexes, newGame, production, resolveEvent, terrainAt,
   type State,
 } from './game'
-import { neighbors } from './hex'
+import { neighbors, parse } from './hex'
 
 const ring1 = neighbors({ q: 0, r: 0 })
 const find = (s: State, t: string) => ring1.find(h => terrainAt(s.seed, h) === t)!
@@ -303,4 +303,23 @@ test('sandbox: era inicial com estoque, sem invasões, produção e metas ajust�
   expect(() => trade(s, 'wood', -1)).toThrow('Mercado')
   for (let i = 0; i < 40; i++) { s = endTurn({ ...s, res: { ...s.res, food: 99 } }); if (s.event) s.event = null }
   expect(s.invaders.length + s.warnings.length).toBe(0)
+})
+
+test('ferrovia ocupa o hex: rede que encosta no Centro liga os vizinhos; demolir devolve metade', () => {
+  let s = newGame(3)
+  s.era = 4; s.pop = 30; s.actions = 30
+  Object.assign(s.res, { steel: 20, money: 500, stone: 20, tools: 10 })
+  for (const k of ['1,0', '2,0']) put(s, k, 'plains')
+  put(s, '3,0', 'plains', 'steelworks')
+  expect(offGrid(s, '3,0')).toBe('sem ferrovia até o Centro')
+  expect(() => buildLink(s, { q: 1, r: 0 }, { q: 2, r: 0 }, 'rail')).toThrow('hex inteiro')
+  for (const k of ['1,0', '2,0']) s = build(s, parse(k), 'railway')
+  s.tiles['1,0'].building!.turnsLeft = 0; s.tiles['2,0'].building!.turnsLeft = 0
+  expect(offGrid(s, '3,0')).toBeNull() // 3,0 encosta em 2,0, que chega ao anel 1 por 1,0
+  const steel = s.res.steel, acts = s.actions
+  s = demolish(s, { q: 1, r: 0 })
+  expect(s.tiles['1,0'].building).toBeUndefined()
+  expect(s.res.steel).toBe(steel + 1) // metade de 2
+  expect(s.actions).toBe(acts - 1)
+  expect(offGrid(s, '3,0')).toBe('sem ferrovia até o Centro') // rede cortada
 })

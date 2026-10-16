@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { BUILDINGS, CONTRACT_EVERY, CONTRACTS, EVENT_EVERY, ERAS, LINKS, NEXT_ERA_NAME, RES, TERRAINS, type BuildingId, type Link, type Res } from './core/data'
 import { EVENT_BY_ID } from './core/events'
 import {
-  abandon, accept, advanceEra, SANDBOX_DEFAULT, type Sandbox, keepPlaying, terrainsOf, decline, DECLINE_COST, affordable, build, buildLink, canChoose, centerMax, contractReward, debt, deliver, endTurn, eraGoals,
+  abandon, accept, advanceEra, demolish, DEMOLISH_COST, SANDBOX_DEFAULT, type Sandbox, keepPlaying, terrainsOf, decline, DECLINE_COST, affordable, build, buildLink, canChoose, centerMax, contractReward, debt, deliver, endTurn, eraGoals,
   explore, happiness, pollutionDelta, run, terrainAt, housing, hunt, idle, income, maxActions, maxContracts, newGame, resolveEvent, shortfall, type State,
 } from './core/game'
 import { distance, key, type Hex } from './core/hex'
@@ -45,7 +45,7 @@ const CARD_SPRITE: Record<BuildingId | Link, SpriteName> = {
   oilwell: 'pumpjack', thermal: 'thermal', hydro: 'hydro', electronics: 'electronicsplant', carplant: 'carplant', hospital: 'hospital', stadium: 'stadium',
   solar: 'solar', wind: 'wind', nuclear: 'nuclear', batteries: 'batteryplant', datacenter: 'datacenter', autofactory: 'autofactory',
   logistics: 'logistics', urbanpark: 'urbanpark', landmark: 'landmark',
-  trail: 'trail', road: 'road', rail: 'rails', highway: 'highway',
+  trail: 'trail', road: 'road', rail: 'rails', highway: 'highway', railway: 'rails',
 }
 const Art = ({ id, size = 58 }: { id: BuildingId | Link; size?: number }) => <Sprite name={CARD_SPRITE[id]} size={size} />
 
@@ -108,8 +108,9 @@ export function App() {
   const tutStart = useRef(state) // estado no início do passo, para detectar a ação pedida
   const [deck, setDeck] = useState(false) // celular: mão aberta
   const [fp, setFp] = useState(false) // primeira pessoa
-  const pickBuilding = (id: BuildingId | null) => { setMode(id); setLink(null); setDeck(false) }
-  const pickLink = (l: Link | null) => { setLink(l); setMode(null); setDeck(false) }
+  const [wreck, setWreck] = useState(false) // modo demolir
+  const pickBuilding = (id: BuildingId | null) => { setMode(id); setLink(null); setDeck(false); setWreck(false) }
+  const pickLink = (l: Link | null) => { setLink(l); setMode(null); setDeck(false); setWreck(false) }
   const toggle = (p: Panel) => setPanel(panel === p ? null : p)
   useEffect(() => setTab(state.era), [state.era])
 
@@ -180,7 +181,7 @@ export function App() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { if (mode || link) sfx('uncard'); setMode(null); setLink(null); setPanel(null) }
+      if (e.key === 'Escape') { if (mode || link || wreck) sfx('uncard'); setMode(null); setLink(null); setWreck(false); setPanel(null) }
       if (e.key === 'Enter' && screen === 'game' && !fp && !state.over && !state.event) act(() => endTurn(state), 'turn')
       if (e.code === 'KeyP' && screen === 'game' && !MOBILE()) { setFp(v => !v); setMode(null); setLink(null); setPanel(null) }
     }
@@ -191,7 +192,9 @@ export function App() {
   const onHex = (h: Hex) => {
     if (state.over || fp) return
     if (!state.tiles[key(h)]) return act(() => explore(state, h), 'explore')
-    if (mode) {
+    if (wreck) {
+      if (state.tiles[key(h)].building) act(() => demolish(state, h), 'hit')
+    } else if (mode) {
       act(() => build(state, h, mode), 'build')
       setMode(null)
     } else if (state.invaders.some(i => i.at === key(h))) act(() => hunt(state, h), 'hunt')
@@ -211,7 +214,7 @@ export function App() {
   const nextEvent = EVENT_EVERY - (state.turn % EVENT_EVERY)
 
   // Mão em leque: cada carta gira e desce um pouco conforme a distância do meio.
-  const links = (Object.keys(LINKS) as Link[]).filter(l => LINKS[l].era === tab)
+  const links = (Object.keys(LINKS) as Link[]).filter(l => LINKS[l].era === tab && !LINKS[l].tile) // Ferrovia vira carta de construção
   const builds = (Object.keys(BUILDINGS) as BuildingId[]).filter(id => BUILDINGS[id].era === tab)
   const mid = (links.length + builds.length - 1) / 2
   const fan = (i: number) => ({ '--rot': `${(i - mid) * 2.2}deg`, '--drop': `${Math.abs(i - mid) ** 2 * 0.8}px` }) as React.CSSProperties
@@ -220,7 +223,7 @@ export function App() {
       <Canvas shadows dpr={[1, 2]} camera={{ position: [0, 10.5, 7.2], fov: 38 }}>
         <color attach="background" args={['#1a0f08']} />
         <fog attach="fog" args={['#1a0f08', 18, 38]} />
-        <Board state={state} buildMode={mode} linkMode={link} onHex={onHex} fp={fp} onExitFp={() => setFp(false)}
+        <Board state={state} buildMode={mode} linkMode={link} demolishMode={wreck} onHex={onHex} fp={fp} onExitFp={() => setFp(false)}
           onEdge={(a, b) => link && act(() => buildLink(state, a, b, link), 'link')} />
       </Canvas>
   )
@@ -376,6 +379,7 @@ export function App() {
         <Minimap state={state} />
         <div className="roundbtns">
           <button className={`round ${hand ? 'on' : ''}`} title="Construir" onClick={() => setHand(!hand)}><Sprite name="hammer" size={34} /></button>
+          <button className={`round ${wreck ? 'on' : ''}`} title="Demolir: volta metade do material" onClick={() => { sfx(wreck ? 'uncard' : 'card'); setWreck(!wreck); setMode(null); setLink(null) }}><Sprite name="tools" size={34} /></button>
           {state.era > 0 && <button className={`round market ${panel === 'trade' ? 'on' : ''}`} title="Mercado e contratos" onClick={() => toggle('trade')}><Sprite name="market" size={34} /></button>}
           <button className={`round ${panel === 'log' ? 'on' : ''}`} title="Registro" onClick={() => toggle('log')}><Sprite name="scroll" size={34} /></button>
           <button className={`round ${panel === 'menu' ? 'on' : ''}`} title="Menu" onClick={() => toggle('menu')}><Sprite name="gear" size={34} /></button>
@@ -442,6 +446,7 @@ export function App() {
         </div>
       )}
 
+      {wreck && <div className="hint frame">Demolir ({DEMOLISH_COST} ✋): toque numa construção · volta metade do material <button className="x" onClick={() => { sfx('uncard'); setWreck(false) }}>✕</button></div>}
       {mode && <div className="hint frame">{BUILDINGS[mode].name}: escolha um hex destacado <button className="x" onClick={() => { sfx('uncard'); pickBuilding(null) }}>✕</button></div>}
       {link && <div className="hint frame">{LINKS[link].name}: toque numa borda entre dois hexes <button className="x" onClick={() => { sfx('uncard'); pickLink(null) }}>✕</button></div>}
       {toast && <div className="toast frame">{toast}</div>}

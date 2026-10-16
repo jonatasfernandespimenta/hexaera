@@ -1031,6 +1031,64 @@ function Raider({ kind }: { kind: number }) {
   )
 }
 
+// ---------- Ferrovia em hex: trilho com auto-conexão ----------
+// `ends` = ângulos (no plano xz) dos vizinhos ligados (outros hexes de Ferrovia e o Centro).
+// 2 pontas em linha → reta; 2 pontas em ângulo → curva suave (Bézier pelo centro); 1 → ramal com para-choque;
+// 3+ → entroncamento (cada ponta vai ao centro); 0 → trecho solto. Cada ponta termina no meio da aresta,
+// então trilhos de hexes vizinhos se encontram certinho.
+const EDGE = R * Math.cos(Math.PI / 6) // apótema: meio da aresta
+type P2 = [number, number]
+function trackPaths(ends: number[]): P2[][] {
+  const at = (a: number): P2 => [Math.cos(a) * EDGE, Math.sin(a) * EDGE]
+  const line = (a: P2, b: P2, n = 10): P2[] => Array.from({ length: n + 1 }, (_, i) => [a[0] + (b[0] - a[0]) * i / n, a[1] + (b[1] - a[1]) * i / n])
+  const bezier = (a: P2, b: P2, n = 14): P2[] => Array.from({ length: n + 1 }, (_, i) => {
+    const t = i / n, u = 1 - t
+    return [u * u * a[0] + t * t * b[0], u * u * a[1] + t * t * b[1]] // controle no centro (0,0)
+  })
+  if (ends.length === 0) return [line(at(0), at(Math.PI))]
+  if (ends.length === 1) return [line(at(ends[0]), [0, 0], 6)]
+  if (ends.length === 2) {
+    const d = Math.abs(((ends[0] - ends[1] + 3 * Math.PI) % (2 * Math.PI)) - Math.PI)
+    return [d < 0.1 ? line(at(ends[0]), at(ends[1])) : bezier(at(ends[0]), at(ends[1]))]
+  }
+  return ends.map(a => line(at(a), [0, 0], 6))
+}
+
+// Peça fina orientada de p a q (dormente, trilho, brita).
+function Seg({ p, q, y, w, h, c }: { p: P2; q: P2; y: number; w: number; h: number; c: string }) {
+  const len = Math.hypot(q[0] - p[0], q[1] - p[1])
+  return <mesh position={[(p[0] + q[0]) / 2, y, (p[1] + q[1]) / 2]} rotation={[0, -Math.atan2(q[1] - p[1], q[0] - p[0]), 0]}
+    geometry={boxGeo([len + 0.01, h, w])} material={voxMat(c)} castShadow receiveShadow />
+}
+
+function Track({ ends }: { ends: number[] }) {
+  const paths = useMemo(() => trackPaths(ends), [ends.join()])
+  const off = (p: P2, q: P2, d: number): [P2, P2] => {
+    const l = Math.hypot(q[0] - p[0], q[1] - p[1]) || 1, nx = -(q[1] - p[1]) / l * d, nz = (q[0] - p[0]) / l * d
+    return [[p[0] + nx, p[1] + nz], [q[0] + nx, q[1] + nz]]
+  }
+  return (
+    <group position={[0, H, 0]}>
+      {paths.map((pts, j) => pts.slice(1).map((q, i) => {
+        const p = pts[i]
+        const [l0, l1] = off(p, q, 0.07), [r0, r1] = off(p, q, -0.07)
+        const mid: P2 = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2]
+        const [s0, s1] = off(mid, [mid[0] + (q[0] - p[0]), mid[1] + (q[1] - p[1])], 0)
+        return (
+          <group key={`${j}-${i}`}>
+            <Seg p={p} q={q} y={0.012} w={0.26} h={0.024} c="#8a8478" />
+            <Seg p={off(s0, s1, 0.11)[0]} q={off(s0, s1, -0.11)[0]} y={0.03} w={0.04} h={0.02} c="#6a4426" />
+            <Seg p={l0} q={l1} y={0.05} w={0.02} h={0.025} c="#9aa0a8" />
+            <Seg p={r0} q={r1} y={0.05} w={0.02} h={0.025} c="#9aa0a8" />
+          </group>
+        )
+      }))}
+      {ends.length === 1 && <Vox p={[0, 0.07, 0]} s={[0.06, 0.1, 0.22]} c="#b8402c" />}
+      {ends.length === 0 && <V name="Transportation - Train Cart" p={[0, 0.03, 0]} s={0.6} ry={Math.PI / 2} />}
+    </group>
+  )
+}
+
 // Trilha/estrada: duas metades, cada uma na altura do seu hex (do centro até a borda).
 const LINK_LOOK: Record<Link, { w: number; c: string }> = { trail: { w: 0.12, c: '#b08a5a' }, road: { w: 0.2, c: '#9a9a90' }, rail: { w: 0.26, c: '#7a7a72' }, highway: { w: 0.3, c: '#3a3a40' } }
 function LinkPiece({ a, b, la, lb, kind }: { a: Hex; b: Hex; la: number; lb: number; kind: Link }) {
@@ -1115,6 +1173,7 @@ type Props = {
   onEdge: (a: Hex, b: Hex) => void
   fp?: boolean
   onExitFp?: () => void
+  demolishMode?: boolean
 }
 
 // Pista: metade das florestas e montanhas ocultas mostra a silhueta.
@@ -1189,7 +1248,7 @@ function FitCamera() {
   return null
 }
 
-export function Board({ state, buildMode, linkMode, onHex, onEdge, fp, onExitFp }: Props) {
+export function Board({ state, buildMode, linkMode, onHex, onEdge, fp, onExitFp, demolishMode }: Props) {
   const [hover, setHover] = useState<string | null>(null)
   const [hoverEdge, setHoverEdge] = useState<string | null>(null)
   const seen = useRef(new Set(Object.keys(state.tiles)))
@@ -1236,7 +1295,8 @@ export function Board({ state, buildMode, linkMode, onHex, onEdge, fp, onExitFp 
         if (isNew) seen.current.add(k)
         const lift = liftOf(k, tile.terrain)
         const valid = buildMode && !canPlace(state, h, buildMode)
-        const glow = valid ? '#7dff6a' : hover === k ? '#ffd890' : undefined
+        const wreck = demolishMode && !!tile.building
+        const glow = wreck ? (hover === k ? '#ff6a4a' : '#c8402a') : valid ? '#7dff6a' : hover === k ? '#ffd890' : undefined
         const b = tile.building
         const wolves = state.invaders.filter(i => i.at === k)
         const why = stop[k]
@@ -1245,7 +1305,10 @@ export function Board({ state, buildMode, linkMode, onHex, onEdge, fp, onExitFp 
           <group key={k} position={[x, 0, z]} {...handlers(h)}>
             <Piece top={TOP[tile.terrain]} side="#4a2e18" glow={glow} flip={isNew} lift={lift}>
               {tile.terrain === 'center' ? <Campfire hp={state.centerHp} max={centerMax(state)} /> : <Terrain tile={tile} k={k} />}
-              {b && <Building id={b.id} done={b.turnsLeft === 0} />}
+              {b && (b.id === 'railway' && b.turnsLeft === 0
+                ? <Track ends={neighbors(h).filter(n => key(n) === '0,0' || state.tiles[key(n)]?.building?.id === 'railway')
+                    .map(n => { const [nx, nz] = toWorld(n); return Math.atan2(nz - z, nx - x) })} />
+                : <Building id={b.id} done={b.turnsLeft === 0} />)}
               {b && working.has(k) && Array.from({ length: BUILDINGS[b.id].workers }, (_, i) => <Worker key={i} i={i} />)}
               {wolves.map(w => <Invader key={w.id} hp={w.hp} kind={w.kind} />)}
             </Piece>

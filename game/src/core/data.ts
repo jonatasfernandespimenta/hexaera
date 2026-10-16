@@ -44,16 +44,17 @@ export type BuildingId =
   | 'workshop' | 'weaver' | 'mill' | 'library' | 'castle' | 'cathedral'
   | 'coalmine' | 'powerplant' | 'steelworks' | 'factory' | 'tenement' | 'park'
   | 'oilwell' | 'thermal' | 'hydro' | 'electronics' | 'carplant' | 'apartment' | 'hospital' | 'stadium' | 'turret'
-  | 'manor' | 'mechfarm' | 'greenhouse' | 'vertfarm' | 'skyscraper'
+  | 'manor' | 'mechfarm' | 'greenhouse' | 'vertfarm' | 'skyscraper' | 'railway'
   | 'solar' | 'wind' | 'nuclear' | 'batteries' | 'datacenter' | 'autofactory' | 'logistics' | 'urbanpark' | 'landmark'
 
-export type Category = 'moradia' | 'producao' | 'industria' | 'cultura' | 'defesa' | 'comercio'
+export type Category = 'moradia' | 'producao' | 'industria' | 'cultura' | 'defesa' | 'comercio' | 'transporte'
 
 export type Link = 'trail' | 'road' | 'rail' | 'highway'
-export const LINKS: Record<Link, { name: string; era: number; level: number; actions: number; cost: Bag }> = {
+// tile: a conexão não vai na borda — ocupa um hex inteiro (construção com esse id).
+export const LINKS: Record<Link, { name: string; era: number; level: number; actions: number; cost: Bag; tile?: BuildingId }> = {
   trail: { name: 'Trilha', era: 0, level: 1, actions: 1, cost: {} },
   road: { name: 'Estrada', era: 2, level: 2, actions: 2, cost: { stone: 1 } },
-  rail: { name: 'Ferrovia', era: 4, level: 3, actions: 3, cost: { steel: 2, money: 20 } },
+  rail: { name: 'Ferrovia', era: 4, level: 3, actions: 3, cost: { steel: 2, money: 20 }, tile: 'railway' },
   highway: { name: 'Rodovia', era: 5, level: 4, actions: 2, cost: { money: 50 } }, // vale como ferrovia, mais barata em ✋
 }
 export const BRIDGE_COST: Bag = { wood: 2 } // borda que toca um Rio
@@ -134,6 +135,8 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
   vertfarm: { name: 'Fazenda vertical', cat: 'producao', era: 6, from: 'greenhouse', desc: '+30 🍖 · 5 ⚡ · sem 👤', terrains: [], actions: 3, cost: { steel: 3, electronics: 2, money: 150 }, turns: 3, workers: 0, hp: 6, produces: { food: 30 }, needsPower: 5 },
 
   // Era Industrial (ver vault: Energia, Produção e Logística)
+  // Ferrovia ocupa o hex; uma rede de trilhos que encosta no Centro liga todos os vizinhos por ferrovia (e estrada/trilha).
+  railway: { name: 'Ferrovia', cat: 'transporte', era: 4, desc: 'Ocupa o hex · liga os vizinhos ao Centro', terrains: ['plains', 'forest', 'mountain', 'river'], actions: 3, cost: { steel: 2, money: 20 }, turns: 1, workers: 0, hp: 4 },
   coalmine: { name: 'Mina de carvão', cat: 'producao', era: 4, desc: '+3 ⚫ · estrada · ☁️1', terrains: ['mountain', 'forest'], actions: 3, cost: { wood: 4, tools: 2 }, turns: 2, workers: 2, hp: 5, link: 'road', produces: { coal: 3 }, pollution: 1 },
   powerplant: { name: 'Usina a carvão', cat: 'industria', era: 4, desc: '2 ⚫ → 8 ⚡ · ☁️4', terrains: ['plains'], actions: 4, cost: { stone: 8, tools: 2, money: 60 }, turns: 3, workers: 2, hp: 6, consumes: { coal: 2 }, power: 8, pollution: 4 },
   steelworks: { name: 'Siderúrgica', cat: 'industria', era: 4, desc: '2 ⚫ + 3 ⛏ + 4 ⚡ → 2 🔩 · ferrovia', terrains: ['plains'], actions: 4, cost: { stone: 6, tools: 3, money: 80 }, turns: 3, workers: 3, hp: 6, link: 'rail', consumes: { coal: 2, iron: 3 }, produces: { steel: 2 }, needsPower: 4, pollution: 3 },

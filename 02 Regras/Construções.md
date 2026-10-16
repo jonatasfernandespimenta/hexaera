@@ -56,3 +56,7 @@ O Centro: gera ✋ base, armazena recursos, é o ponto onde toda infraestrutura 
 No físico, melhorias usam **marcadores de nível encaixados na miniatura** (uma Fazenda nível 2 em vez de duas Fazendas) — reduz peças e reforça otimizar em vez de espalhar.
 
 Construções podem ser **melhoradas** para a versão da era seguinte no mesmo hex (Cabana → Casa → Sobrado → Prédio), mantendo a história do lugar.
+
+
+## Demolir ✅ (2026-10-16)
+Botão de demolir (picareta) → toque numa construção: custa **1 ✋**, o hex fica livre e **volta metade do custo** (arredonda para baixo). Se a moradia sumir, quem ficou sem casa vai embora na hora. Serve para corrigir rota, não para trocar de lugar de graça.
