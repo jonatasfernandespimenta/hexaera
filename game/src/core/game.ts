@@ -5,6 +5,7 @@ import {
 } from './data'
 import { EVENT_BY_ID, EVENTS, type Effect, type EventOption } from './events'
 import { distance, key, neighbors, parse, type Hex } from './hex'
+import { t as tr } from '../i18n'
 
 export type Building = { id: BuildingId; turnsLeft: number; hp: number; up?: boolean } // up: melhoria sobre a construção anterior
 export type Tile = { terrain: Terrain | 'center'; building?: Building }
@@ -160,12 +161,12 @@ export function linkCost(s: State, a: Hex, b: Hex, kind: Link): { actions: numbe
 }
 
 export function canLink(s: State, a: Hex, b: Hex, kind: Link): string | null {
-  if (LINKS[kind].tile) return `${LINKS[kind].name} ocupa um hex inteiro: use a carta de construção.`
-  if (LINKS[kind].era > s.era) return `${LINKS[kind].name} é da Era ${ERAS[LINKS[kind].era].name}.`
-  if (!s.tiles[key(a)] || !s.tiles[key(b)]) return 'Os dois hexes precisam estar revelados.'
-  if (distance(a, b) !== 1) return 'Só entre hexes vizinhos.'
+  if (LINKS[kind].tile) return tr('{0} ocupa um hex inteiro: use a carta de construção.', LINKS[kind].name)
+  if (LINKS[kind].era > s.era) return tr('{0} é da Era {1}.', LINKS[kind].name, ERAS[LINKS[kind].era].name)
+  if (!s.tiles[key(a)] || !s.tiles[key(b)]) return tr('Os dois hexes precisam estar revelados.')
+  if (distance(a, b) !== 1) return tr('Só entre hexes vizinhos.')
   const prev = s.links[edgeKey(a, b)]
-  if (prev && LINKS[prev].level >= LINKS[kind].level) return 'Já existe.'
+  if (prev && LINKS[prev].level >= LINKS[kind].level) return tr('Já existe.')
   return null
 }
 
@@ -174,7 +175,7 @@ export function buildLink(prev: State, a: Hex, b: Hex, kind: Link): State {
   const err = canLink(prev, a, b, kind)
   if (err) throw new Error(err)
   const { actions, cost } = linkCost(prev, a, b, kind)
-  if (actions > prev.actions) throw new Error(`Faltam ações: custa ${actions} ✋.`)
+  if (actions > prev.actions) throw new Error(tr('Faltam ações: custa {0} ✋.', actions))
   const s = structuredClone(prev)
   s.actions -= actions
   for (const [r, v] of Object.entries(cost) as [Res, number][]) s.res[r] -= v
@@ -192,12 +193,13 @@ export const count = (s: State, id: BuildingId) =>
 // Só quem move mercadoria precisa de conexão; moradia, cultura e defesa funcionam isoladas.
 const SHIPS: Category[] = ['producao', 'industria', 'comercio']
 export const OFF_GRID_MULT = 0.5
+const OFF_NAME: Record<Link, string> = { trail: 'trilha', road: 'estrada', rail: 'ferrovia', highway: 'rodovia' }
 
 // Construção que precisa de conexão e não tem: funciona, mas rende OFF_GRID_MULT. Devolve o que falta.
 export function offGrid(s: State, k: string, links = linked(s)): string | null {
   const def = BUILDINGS[s.tiles[k].building!.id]
   if (!SHIPS.includes(def.cat) || links[def.link ?? 'trail'].has(k)) return null
-  return `sem ${LINKS[def.link ?? 'trail'].name.toLowerCase()} até o Centro`
+  return `sem ${OFF_NAME[def.link ?? 'trail']} até o Centro`
 }
 
 // Por que uma construção pronta não está funcionando (null = funcionando).
@@ -353,7 +355,7 @@ export function newGame(seed = Math.floor(Math.random() * 1e6), opts?: Sandbox):
     seed, rng: seed, turn: 1, era: 0, tiles: { '0,0': { terrain: 'center' } },
     pop: 3, res: { ...zero(), food: 5, wood: 3 }, actions: 0, centerHp: CENTER_HP,
     invaders: [], warnings: [], mods: [], luxury: false, flags: [], deck: [], event: null,
-    log: ['A tribo acendeu a primeira fogueira.'], nextId: 1, over: null,
+    log: [tr('A tribo acendeu a primeira fogueira.')], nextId: 1, over: null,
     links: {}, prices: {}, traded: 0, offers: [], contracts: [], rep: 0, pollution: 0,
   }
   for (const [r, d] of Object.entries(RES)) if (d.price) s.prices[r as Res] = d.price
@@ -373,16 +375,16 @@ export function newGame(seed = Math.floor(Math.random() * 1e6), opts?: Sandbox):
 }
 
 function guard(s: State) {
-  if (s.over) throw new Error('A partida acabou.')
-  if (s.event) throw new Error('Resolva o evento primeiro.')
+  if (s.over) throw new Error(tr('A partida acabou.'))
+  if (s.event) throw new Error(tr('Resolva o evento primeiro.'))
 }
 
 export function explore(prev: State, h: Hex): State {
   guard(prev)
-  if (prev.tiles[key(h)]) throw new Error('Já revelado.')
-  if (!neighbors(h).some(n => prev.tiles[key(n)])) throw new Error('Precisa ser vizinho do seu território.')
+  if (prev.tiles[key(h)]) throw new Error(tr('Já revelado.'))
+  if (!neighbors(h).some(n => prev.tiles[key(n)])) throw new Error(tr('Precisa ser vizinho do seu território.'))
   const cost = exploreCost(prev, h)
-  if (cost > prev.actions) throw new Error(`Faltam ações: custa ${cost} ✋.`)
+  if (cost > prev.actions) throw new Error(tr('Faltam ações: custa {0} ✋.', cost))
   const s = structuredClone(prev)
   s.actions -= cost
   s.tiles[key(h)] = { terrain: terrainAt(s.seed, h) }
@@ -400,18 +402,18 @@ const isUpgrade = (t: Tile, id: BuildingId) => !!BUILDINGS[id].from && t.buildin
 export function canPlace(s: State, h: Hex, id: BuildingId): string | null {
   const t = s.tiles[key(h)]
   const def = BUILDINGS[id]
-  if (!t) return 'Hexágono não revelado.'
-  if (def.era > s.era) return `${def.name} é da Era ${ERAS[def.era].name}.`
+  if (!t) return tr('Hexágono não revelado.')
+  if (def.era > s.era) return tr('{0} é da Era {1}.', def.name, ERAS[def.era].name)
   if (isUpgrade(t, id)) return null
-  if (t.building || t.terrain === 'center') return 'Já ocupado.'
+  if (t.building || t.terrain === 'center') return tr('Já ocupado.')
   const ok = terrainsOf(id)
-  if (!ok.includes(t.terrain)) return `${def.name} exige ${ok.map(x => TERRAINS[x].name).join(' ou ')}.`
+  if (!ok.includes(t.terrain)) return tr('{0} exige {1}.', def.name, ok.map(x => TERRAINS[x].name).join(tr(' ou ')))
   return null
 }
 
 export function affordable(s: State, id: BuildingId): string | null {
   const def = BUILDINGS[id]
-  if (def.actions > s.actions) return `Faltam ações: custa ${def.actions} ✋.`
+  if (def.actions > s.actions) return tr('Faltam ações: custa {0} ✋.', def.actions)
   return null
 }
 
@@ -419,7 +421,7 @@ export function affordable(s: State, id: BuildingId): string | null {
 export function shortfall(s: State, id: BuildingId): string | null {
   const miss = (Object.entries(BUILDINGS[id].cost) as [Res, number][])
     .filter(([r, v]) => s.res[r] < v).map(([r, v]) => `${v - s.res[r]} ${RES[r].icon}`)
-  return miss.length ? `Você ficará devendo ${miss.join(', ')}.` : null
+  return miss.length ? tr('Você ficará devendo {0}.', miss.join(', ')) : null
 }
 
 export function build(prev: State, h: Hex, id: BuildingId): State {
@@ -473,10 +475,10 @@ export const railNew = (s: State, path: Hex[]) => path.filter(h => key(h) !== '0
 
 export function buildRail(prev: State, path: Hex[]): State {
   guard(prev)
-  if (path.length < 2) throw new Error('Escolha um destino diferente da origem.')
+  if (path.length < 2) throw new Error(tr('Escolha um destino diferente da origem.'))
   const fresh = railNew(prev, path)
   const def = BUILDINGS.railway
-  if (fresh.length * def.actions > prev.actions) throw new Error(`Faltam ações: ${fresh.length} trilhos custam ${fresh.length * def.actions} ✋.`)
+  if (fresh.length * def.actions > prev.actions) throw new Error(tr('Faltam ações: {0} trilhos custam {1} ✋.', fresh.length, fresh.length * def.actions))
   let s = prev
   for (const h of fresh) s = build(s, h, 'railway')
   s = structuredClone(s)
@@ -489,8 +491,8 @@ export const DEMOLISH_COST = 1
 export function demolish(prev: State, h: Hex): State {
   guard(prev)
   const t = prev.tiles[key(h)]
-  if (!t?.building) throw new Error('Não há construção aqui.')
-  if (prev.actions < DEMOLISH_COST) throw new Error(`Faltam ações: demolir custa ${DEMOLISH_COST} ✋.`)
+  if (!t?.building) throw new Error(tr('Não há construção aqui.'))
+  if (prev.actions < DEMOLISH_COST) throw new Error(tr('Faltam ações: demolir custa {0} ✋.', DEMOLISH_COST))
   const s = structuredClone(prev)
   const def = BUILDINGS[t.building.id]
   s.actions -= DEMOLISH_COST
@@ -499,7 +501,7 @@ export function demolish(prev: State, h: Hex): State {
   for (const n of neighbors(h)) if (s.links[edgeKey(h, n)] === 'rail') delete s.links[edgeKey(h, n)] // trilho sai junto com a rota
   const gone = s.pop - Math.min(s.pop, housing(s))
   s.pop -= gone
-  log(s, `${def.name} demolida.${gone ? ` ${gone} 👤 partiram sem casa.` : ''}`)
+  log(s, tr('{0} demolida.', def.name) + (gone ? ' ' + tr('{0} 👤 partiram sem casa.', gone) : ''))
   return s
 }
 
@@ -524,9 +526,9 @@ function draw(s: State): string | null {
 }
 
 export function canChoose(s: State, o: EventOption): string | null {
-  if (o.requires && count(s, o.requires) === 0) return `Requer ${BUILDINGS[o.requires].name}`
+  if (o.requires && count(s, o.requires) === 0) return tr('Requer {0}', BUILDINGS[o.requires].name)
   const e = o.effect
-  if (e.actions && s.actions + e.actions < 0) return 'Faltam ações'
+  if (e.actions && s.actions + e.actions < 0) return tr('Faltam ações')
   return null
 }
 
@@ -539,14 +541,14 @@ function warn(s: State) {
     k !== '0,0' && !s.warnings.includes(k) && neighbors(parse(k)).some(n => !s.tiles[key(n)]))
   if (!border.length) return
   s.warnings.push(pick(s, border))
-  log(s, `⚠️ ${THREATS[s.era].name} à vista… ataque no próximo turno!`)
+  log(s, tr('⚠️ {0} à vista… ataque no próximo turno!', THREATS[s.era].name))
 }
 
 function destroyRandom(s: State) {
   const ks = Object.keys(s.tiles).filter(k => s.tiles[k].building)
   if (!ks.length) return
   const k = pick(s, ks)
-  log(s, `${BUILDINGS[s.tiles[k].building!.id].name} foi destruída.`)
+  log(s, tr('{0} foi destruída.', BUILDINGS[s.tiles[k].building!.id].name))
   delete s.tiles[k].building
 }
 
@@ -564,7 +566,7 @@ function applyEffect(s: State, e: Effect, label: string) {
 }
 
 export function resolveEvent(prev: State, i: number): State {
-  if (!prev.event) throw new Error('Nenhum evento.')
+  if (!prev.event) throw new Error(tr('Nenhum evento.'))
   const card = EVENT_BY_ID[prev.event]
   const o = card.options[i]
   const err = canChoose(prev, o)
@@ -586,22 +588,22 @@ const addBag = (s: State, b: Bag, k = 1) => {
 const bagText = (b: Bag) => Object.entries(b).map(([r, v]) => `${v} ${RES[r as Res].icon}`).join(' + ')
 
 function kill(s: State, inv: Invader, by: string) {
-  const t = THREATS[inv.kind]
-  addBag(s, t.loot)
+  const th = THREATS[inv.kind]
+  addBag(s, th.loot)
   s.invaders = s.invaders.filter(i => i !== inv)
-  log(s, `${by} derrotou ${t.icon} ${t.name} (+${bagText(t.loot)}).`)
+  log(s, tr('{0} derrotou {1} {2} (+{3}).', by, th.icon, th.name, bagText(th.loot)))
 }
 
 // A tribo enfrenta um invasor no território: gasta ✋, causa dano (Quartéis aumentam).
 export function hunt(prev: State, h: Hex): State {
   guard(prev)
-  if (HUNT_COST > prev.actions) throw new Error(`Faltam ações: atacar custa ${HUNT_COST} ✋.`)
+  if (HUNT_COST > prev.actions) throw new Error(tr('Faltam ações: atacar custa {0} ✋.', HUNT_COST))
   const s = structuredClone(prev)
   const inv = s.invaders.filter(i => i.at === key(h)).sort((a, b) => a.hp - b.hp)[0]
-  if (!inv) throw new Error('Nenhum invasor aqui.')
+  if (!inv) throw new Error(tr('Nenhum invasor aqui.'))
   s.actions -= HUNT_COST
   inv.hp -= huntDamage(s)
-  if (inv.hp <= 0) kill(s, inv, 'A tribo')
+  if (inv.hp <= 0) kill(s, inv, tr('A tribo'))
   return s
 }
 
@@ -611,7 +613,7 @@ function sabotage(s: State, inv: Invader) {
   const edge = neighbors(here).map(n => edgeKey(here, n)).filter(e => s.links[e])
     .sort((a, b) => LINKS[s.links[b]].level - LINKS[s.links[a]].level)[0]
   if (!edge) return
-  log(s, `🧨 Sabotadores destruíram uma ${LINKS[s.links[edge]].name.toLowerCase()}!`)
+  log(s, tr('🧨 Sabotadores destruíram uma {0}!', LINKS[s.links[edge]].name.toLowerCase()))
   delete s.links[edge]
 }
 
@@ -625,7 +627,7 @@ function threats(s: State) {
       .sort((a, b) => a.hp - b.hp)[0]
     if (!target) continue
     target.hp -= tw.damage
-    if (target.hp <= 0) kill(s, target, 'A torre')
+    if (target.hp <= 0) kill(s, target, tr('A torre'))
   }
 
   // Invasores: atacam a construção onde estão, o Centro se estiverem ao lado, ou avançam 1 hex.
@@ -638,14 +640,14 @@ function threats(s: State) {
     if (t?.building) {
       t.building.hp -= inv.atk
       if (t.building.hp <= 0) {
-        log(s, `${name}: destruíram ${BUILDINGS[t.building.id].name}.`)
+        log(s, tr('{0}: destruíram {1}.', name, BUILDINGS[t.building.id].name))
         delete t.building
       }
       continue
     }
     if (distance(here) === 1) {
       s.centerHp -= inv.atk
-      log(s, `🔥 ${name} atacam o Centro!`)
+      log(s, tr('🔥 {0} atacam o Centro!', name))
       continue
     }
     const next = neighbors(here).filter(n => s.tiles[key(n)]).sort((a, b) => distance(a) - distance(b))[0]
@@ -661,10 +663,10 @@ export const sellPrice = (s: State, r: Res) => Math.max(1, Math.floor(s.prices[r
 // qty > 0 compra, qty < 0 vende. Comércio não gera dívida: só com 💰 e estoque disponíveis.
 export function trade(prev: State, r: Res, qty: number): State {
   guard(prev)
-  if (!RES[r].price) throw new Error('Não negociável.')
-  if (RES[r].era > prev.era) throw new Error(`${RES[r].name} ainda não circula.`)
+  if (!RES[r].price) throw new Error(tr('Não negociável.'))
+  if (RES[r].era > prev.era) throw new Error(tr('{0} ainda não circula.', RES[r].name))
   const room = tradeLimit(prev) - prev.traded
-  if (room <= 0) throw new Error(tradeLimit(prev) ? 'Limite de comércio do turno atingido.' : 'Precisa de um Mercado conectado.')
+  if (room <= 0) throw new Error(tradeLimit(prev) ? tr('Limite de comércio do turno atingido.') : tr('Precisa de um Mercado conectado.'))
   const s = structuredClone(prev)
   const n = Math.min(Math.abs(qty), room)
   for (let i = 0; i < n; i++) {
@@ -682,7 +684,7 @@ export function trade(prev: State, r: Res, qty: number): State {
     }
     s.traded += 1
   }
-  if (s.traded === prev.traded) throw new Error(qty > 0 ? 'Falta 💰.' : `Sem ${RES[r].name.toLowerCase()} no estoque.`)
+  if (s.traded === prev.traded) throw new Error(qty > 0 ? tr('Falta 💰.') : tr('Sem {0} no estoque.', RES[r].name.toLowerCase()))
   return s
 }
 
@@ -713,10 +715,10 @@ export function contractReward(s: State, c: Contract) {
 export function accept(prev: State, id: number): State {
   guard(prev)
   if (prev.contracts.length >= maxContracts(prev))
-    throw new Error(maxContracts(prev) ? 'Limite de contratos ativos (1 por Mercado).' : 'Precisa de um Mercado conectado.')
+    throw new Error(maxContracts(prev) ? tr('Limite de contratos ativos (1 por Mercado).') : tr('Precisa de um Mercado conectado.'))
   const s = structuredClone(prev)
   const i = s.offers.findIndex(c => c.id === id)
-  if (i < 0) throw new Error('Contrato indisponível.')
+  if (i < 0) throw new Error(tr('Contrato indisponível.'))
   s.contracts.push(...s.offers.splice(i, 1))
   return s
 }
@@ -725,10 +727,10 @@ export function accept(prev: State, id: number): State {
 export const DECLINE_COST = 1
 export function decline(prev: State, id: number): State {
   guard(prev)
-  if (prev.actions < DECLINE_COST) throw new Error(`Faltam ações: recusar custa ${DECLINE_COST} ✋.`)
+  if (prev.actions < DECLINE_COST) throw new Error(tr('Faltam ações: recusar custa {0} ✋.', DECLINE_COST))
   const s = structuredClone(prev)
   const i = s.offers.findIndex(c => c.id === id)
-  if (i < 0) throw new Error('Contrato indisponível.')
+  if (i < 0) throw new Error(tr('Contrato indisponível.'))
   s.actions -= DECLINE_COST
   s.offers.splice(i, 1)
   offer(s)
@@ -740,11 +742,11 @@ export function abandon(prev: State, id: number): State {
   guard(prev)
   const s = structuredClone(prev)
   const c = s.contracts.find(x => x.id === id)
-  if (!c) throw new Error('Contrato não encontrado.')
+  if (!c) throw new Error(tr('Contrato não encontrado.'))
   const def = CONTRACTS[c.def]
   s.rep = Math.max(0, s.rep - def.rep)
   s.contracts = s.contracts.filter(x => x !== c)
-  log(s, `🏳 Desistiu do contrato ${def.client}: −${def.rep} ⭐.`)
+  log(s, tr('🏳 Desistiu do contrato {0}: −{1} ⭐.', def.client, def.rep))
   return s
 }
 
@@ -753,7 +755,7 @@ export function deliver(prev: State, id: number): State {
   guard(prev)
   const s = structuredClone(prev)
   const c = s.contracts.find(x => x.id === id)
-  if (!c) throw new Error('Contrato não encontrado.')
+  if (!c) throw new Error(tr('Contrato não encontrado.'))
   let moved = 0
   for (const [r, v] of Object.entries(c.left) as [Res, number][]) {
     const give = Math.min(Math.max(0, s.res[r]), v)
@@ -766,8 +768,8 @@ export function deliver(prev: State, id: number): State {
     s.res.money += contractReward(s, c)
     s.rep += def.rep
     s.contracts = s.contracts.filter(x => x !== c)
-    log(s, `✅ Contrato ${def.client} cumprido: +${contractReward(prev, c)} 💰, +${def.rep} ⭐.`)
-  } else if (!moved) throw new Error('Nada para entregar no estoque.')
+    log(s, tr('✅ Contrato {0} cumprido: +{1} 💰, +{2} ⭐.', def.client, contractReward(prev, c), def.rep))
+  } else if (!moved) throw new Error(tr('Nada para entregar no estoque.'))
   return s
 }
 
@@ -776,7 +778,7 @@ function contractsTick(s: State) {
   for (const c of s.contracts.filter(x => x.turns <= 0)) {
     const def = CONTRACTS[c.def]
     s.rep = Math.max(0, s.rep - 2 * def.rep)
-    log(s, `❌ Contrato ${def.client} falhou: −${2 * def.rep} ⭐.`)
+    log(s, tr('❌ Contrato {0} falhou: −{1} ⭐.', def.client, 2 * def.rep))
   }
   s.contracts = s.contracts.filter(c => c.turns > 0)
   if (s.era < 1 || !count(s, 'market')) return
@@ -804,7 +806,7 @@ export function endTurn(prev: State): State {
     // (Dívida de 🍖 acumulava, zerava a 😊 e derrubava a produção sem volta — ver vault: Playtest.)
     const gone = Math.min(s.pop, Math.ceil(-s.res.food / 2))
     s.pop -= gone
-    log(s, `Fome! ${gone} 👤 partiram.`)
+    log(s, tr('Fome! {0} 👤 partiram.', gone))
     s.res.food = 0
     s.mods = s.mods.filter(m => m.label !== 'Fome').concat({ label: 'Fome', turns: 3, happy: -10 })
   }
@@ -819,7 +821,7 @@ export function endTurn(prev: State): State {
     if (!t.building || t.building.turnsLeft === 0) continue
     t.building.turnsLeft -= 1
     if (t.building.turnsLeft === 0) {
-      log(s, `${BUILDINGS[t.building.id].name} concluída.`)
+      log(s, tr('{0} concluída.', BUILDINGS[t.building.id].name))
     }
   }
 
@@ -836,7 +838,7 @@ export function endTurn(prev: State): State {
   const th = THREATS[s.era] // força cresce com a era, não com o turno
   for (const at of s.warnings) {
     s.invaders.push({ id: s.nextId++, at, hp: th.hp, atk: th.atk, kind: s.era })
-    log(s, `${th.icon} ${th.name} chegaram!`)
+    log(s, tr('{0} {1} chegaram!', th.icon, th.name))
   }
   s.warnings = []
   if (s.turn >= THREAT_FROM_TURN && roll(s) < THREAT_CHANCE * (s.opts?.threats ?? 1)) warn(s)
@@ -871,14 +873,14 @@ export function keepPlaying(prev: State): State {
 
 export function advanceEra(prev: State): State {
   guard(prev)
-  if (!eraGoals(prev).every(g => g.have >= g.need)) throw new Error('Requisitos da era incompletos.')
+  if (!eraGoals(prev).every(g => g.have >= g.need)) throw new Error(tr('Requisitos da era incompletos.'))
   const s = structuredClone(prev)
   if (s.era === ERAS.length - 1) {
-    if (s.flags.includes('sandbox')) throw new Error('Civilização já concluída.')
+    if (s.flags.includes('sandbox')) throw new Error(tr('Civilização já concluída.'))
     return { ...s, over: 'won' }
   }
   s.era += 1
   s.centerHp = centerMax(s)
-  log(s, `A tribo entra na Era ${ERAS[s.era].name}!`)
+  log(s, tr('A tribo entra na Era {0}!', ERAS[s.era].name))
   return s
 }

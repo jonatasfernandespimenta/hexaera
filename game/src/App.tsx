@@ -1,6 +1,6 @@
 import { Canvas } from '@react-three/fiber'
 import { useEffect, useRef, useState } from 'react'
-import { BUILDINGS, CONTRACT_EVERY, CONTRACTS, EVENT_EVERY, ERAS, LINKS, NEXT_ERA_NAME, RES, TERRAINS, type BuildingId, type Link, type Res } from './core/data'
+import { BUILDINGS, CONTRACT_EVERY, CONTRACTS, EVENT_EVERY, ERAS, LINKS, RES, TERRAINS, type BuildingId, type Link, type Res } from './core/data'
 import { EVENT_BY_ID } from './core/events'
 import {
   abandon, accept, advanceEra, buildRail, canPlace, railPath, demolish, DEMOLISH_COST, SANDBOX_DEFAULT, type Sandbox, keepPlaying, terrainsOf, decline, DECLINE_COST, affordable, build, buildLink, canChoose, centerMax, contractReward, debt, deliver, endTurn, eraGoals,
@@ -13,6 +13,7 @@ import { Sprite, type SpriteName } from './Sprite'
 import { Trade } from './Trade'
 import { Coach, STEPS } from './Tutorial'
 import { isMuted, setMuted, sfx, startAmbience, type Sfx } from './sfx'
+import { lang, setLang, t } from './i18n'
 
 const sign = (n: number) => (n > 0 ? `+${n}` : `${n}`)
 // Ícone de cada recurso (atlas em public/ui).
@@ -65,11 +66,11 @@ const loadSave = (): State | null => { try { return JSON.parse(store.get(SAVE) ?
 
 // Opções do Sandbox: cada linha é um seletor de botões.
 const SANDBOX_ROWS: { key: keyof Sandbox; label: string; opts: [Sandbox[keyof Sandbox], string][] }[] = [
-  { key: 'threats', label: 'Invasões', opts: [[0, 'Nenhuma'], [0.5, 'Raras'], [1, 'Normais'], [2, 'Frequentes']] },
-  { key: 'abundance', label: 'Abundância', opts: [[0.75, 'Escassa'], [1, 'Normal'], [1.5, 'Farta']] },
-  { key: 'pace', label: 'Ritmo das eras', opts: [[0.5, 'Rápido'], [1, 'Normal'], [1.5, 'Lento']] },
-  { key: 'market', label: 'Mercado', opts: [['volatil', 'Volátil'], ['estavel', 'Estável'], ['off', 'Desligado']] },
-  { key: 'era', label: 'Era inicial', opts: ERAS.map((e, i) => [i, e.name.replace(/^do /, '')] as [number, string]) },
+  { key: 'threats', label: t('Invasões'), opts: [[0, t('Nenhuma')], [0.5, t('Raras')], [1, t('Normais')], [2, t('Frequentes')]] },
+  { key: 'abundance', label: t('Abundância'), opts: [[0.75, t('Escassa')], [1, t('Normal')], [1.5, t('Farta')]] },
+  { key: 'pace', label: t('Ritmo das eras'), opts: [[0.5, t('Rápido')], [1, t('Normal')], [1.5, t('Lento')]] },
+  { key: 'market', label: t('Mercado'), opts: [['volatil', t('Volátil')], ['estavel', t('Estável')], ['off', t('Desligado')]] },
+  { key: 'era', label: t('Era inicial'), opts: ERAS.map((e, i) => [i, e.name.replace(/^do /, '')] as [number, string]) },
 ]
 function SandboxSetup({ value, onChange, onBack, onStart }: { value: Sandbox; onChange: (v: Sandbox) => void; onBack: () => void; onStart: () => void }) {
   return (
@@ -86,8 +87,8 @@ function SandboxSetup({ value, onChange, onBack, onStart }: { value: Sandbox; on
           </div>
         </div>
       ))}
-      <button className="opt green" onClick={onStart}><b>Começar</b><span>substitui o jogo salvo</span></button>
-      <button className="opt dark" onClick={onBack}><b>Voltar</b></button>
+      <button className="opt green" onClick={onStart}><b>{t('Começar')}</b><span>{t('substitui o jogo salvo')}</span></button>
+      <button className="opt dark" onClick={onBack}><b>{t('Voltar')}</b></button>
     </div>
   )
 }
@@ -212,10 +213,10 @@ export function App() {
       if (!railFrom) {
         const k = key(h)
         if (k === '0,0' || state.tiles[k].building?.id === 'railway' || !canPlace(state, h, 'railway')) { sfx('card'); setRailFrom(h) }
-        else setToast('Origem: o Centro, um trilho ou um hex livre.')
+        else setToast(t('Origem: o Centro, um trilho ou um hex livre.'))
       } else {
         const path = railPath(state, railFrom, h)
-        if (!path) return setToast('Sem caminho livre até aí.')
+        if (!path) return setToast(t('Sem caminho livre até aí.'))
         // Celular não tem hover: 1º toque no destino mostra rota e custo, 2º no mesmo hex constrói.
         if (MOBILE() && key(h) !== (railTo && key(railTo))) { sfx('hover'); return setRailTo(h) }
         act(() => buildRail(state, path), 'link')
@@ -259,7 +260,7 @@ export function App() {
   if (fp) return (
     <>
       {canvas}
-      <div className="fphint frame">WASD andar · Shift correr · mouse olhar · Esc ou P sair</div>
+      <div className="fphint frame">{t('WASD andar · Shift correr · mouse olhar · Esc ou P sair')}</div>
       <div className="crosshair" />
     </>
   )
@@ -273,14 +274,15 @@ export function App() {
         <div className="vignette" />
         <div className="title">
           <h1>Hexaera</h1>
-          <p>Da fogueira à metrópole</p>
+          <p>{t('Da fogueira à metrópole')}</p>
           {setup ? <SandboxSetup value={setup} onChange={setSetup} onBack={() => setSetup(null)}
             onStart={() => { play(newGame(undefined, setup)); setSetup(null) }} /> : <div className="pcard menu">
-            {save && <button className="opt green" onClick={() => play(save)}><b>Continuar</b><span>Era {ERAS[save.era].name} · turno {save.turn}</span></button>}
-            <button className={`opt ${save || fresh ? 'dark' : 'green'}`} onClick={() => play(newGame())}><b>Nova civilização</b>{save && <span>substitui o jogo salvo</span>}</button>
-            <button className={`opt ${fresh ? 'green' : 'dark'}`} onClick={startTutorial}><b>Tutorial</b><span>{fresh ? 'recomendado · 2 minutos' : 'rever as mecânicas'}</span></button>
-            <button className="opt dark" onClick={() => { sfx('card'); setSetup(SANDBOX_DEFAULT) }}><b>Sandbox</b><span>sem objetivo · você ajusta o mundo</span></button>
-            <button className="opt dark" onClick={() => { setMuted(!mute); setMute(!mute); if (mute) sfx('click') }}><b>{mute ? '🔇 Som desligado' : '🔊 Som ligado'}</b></button>
+            {save && <button className="opt green" onClick={() => play(save)}><b>{t('Continuar')}</b><span>{t('Era {0} · turno {1}', ERAS[save.era].name, save.turn)}</span></button>}
+            <button className={`opt ${save || fresh ? 'dark' : 'green'}`} onClick={() => play(newGame())}><b>{t('Nova civilização')}</b>{save && <span>{t('substitui o jogo salvo')}</span>}</button>
+            <button className={`opt ${fresh ? 'green' : 'dark'}`} onClick={startTutorial}><b>{t('Tutorial')}</b><span>{t(fresh ? 'recomendado · 2 minutos' : 'rever as mecânicas')}</span></button>
+            <button className="opt dark" onClick={() => { sfx('card'); setSetup(SANDBOX_DEFAULT) }}><b>Sandbox</b><span>{t('sem objetivo · você ajusta o mundo')}</span></button>
+            <button className="opt dark" onClick={() => { setMuted(!mute); setMute(!mute); if (mute) sfx('click') }}><b>{t(mute ? '🔇 Som desligado' : '🔊 Som ligado')}</b></button>
+            <LangToggle />
           </div>}
         </div>
       </>
@@ -294,18 +296,18 @@ export function App() {
 
       {/* ---------- topo: recursos ---------- */}
       <div className={`bar frame ${shown.length > 12 ? 'dense' : ''}`}>
-        <Stat icon={<Sprite name="hand" size={28} />} value={`${state.actions}/${maxActions(state)}`} title={`Ações por turno: 3 do Centro + ${idle(state)} 👤 ociosos + estábulos/moinhos. As que sobram passam para o próximo turno (até ${2 * maxActions(state)}), para juntar em obras grandes.`} />
-        <Stat icon={<Sprite name="people" size={30} />} value={`${state.pop}/${housing(state)}`} title="População / moradia" />
+        <Stat icon={<Sprite name="hand" size={28} />} value={`${state.actions}/${maxActions(state)}`} title={t('Ações por turno: 3 do Centro + {0} 👤 ociosos + estábulos/moinhos. As que sobram passam para o próximo turno (até {1}), para juntar em obras grandes.', idle(state), 2 * maxActions(state))} />
+        <Stat icon={<Sprite name="people" size={30} />} value={`${state.pop}/${housing(state)}`} title={t('População / moradia')} />
         <Stat icon={<Sprite name="smile" size={28} />} value={happy} cls={happy < 30 ? 'neg' : happy >= 75 ? 'pos' : ''}
-          title={`Felicidade (abaixo de 30 reduz a produção; 75+ dá 📚)${debt(state) ? ` · dívida: −${2 * debt(state)}` : ''}`} />
+          title={t('Felicidade (abaixo de 30 reduz a produção; 75+ dá 📚)') + (debt(state) ? t(' · dívida: −{0}', 2 * debt(state)) : '')} />
         {state.era >= 4 && <Stat icon={<Sprite name="bolt" size={26} />} value={`${power.used}/${power.supply}`}
-          title="Energia ⚡: usada / gerada neste turno (não acumula). Usinas a carvão geram; Siderúrgica e Fábrica consomem." />}
+          title={t('Energia ⚡: usada / gerada neste turno (não acumula). Usinas a carvão geram; Siderúrgica e Fábrica consomem.')} />}
         {(state.era >= 4 || state.pollution > 0) && <Stat icon={<Sprite name="smog" size={28} />} value={state.pollution} delta={pollutionDelta(state)}
-          cls={state.pollution >= 40 ? 'neg' : ''} title={`Poluição ☁️ (0–100): tira ☁️/2 de 😊; acima de 40 traz eventos. Cada floresta e parque limpa.`} />}
+          cls={state.pollution >= 40 ? 'neg' : ''} title={t('Poluição ☁️ (0–100): tira ☁️/2 de 😊; acima de 40 traz eventos. Cada floresta e parque limpa.')} />}
         {shown.map(r => (
           <Stat key={r} icon={<ResIcon r={r} size={30} />} value={state.res[r]} delta={inc[r]} title={RES[r].name} cls={state.res[r] < 0 ? 'neg' : ''} />
         ))}
-        {state.era > 0 && <Stat icon={<Sprite name="star" size={28} />} value={state.rep} title="Reputação: +5% de 💰 em contratos por ⭐" />}
+        {state.era > 0 && <Stat icon={<Sprite name="star" size={28} />} value={state.rep} title={t('Reputação: +5% de 💰 em contratos por ⭐')} />}
       </div>
 
       {/* ---------- topo direito: turno ---------- */}
@@ -313,37 +315,37 @@ export function App() {
         <div className="frame turnbox">
           <span className="sun"><Sprite name="sun" size={40} /></span>
           <div>
-            <b>Turno {state.turn}</b>
-            <small>Era {ERAS[state.era].name} · {ERAS[state.era].center}</small>
-            <div className="hp" title="Vida do Centro: se chegar a 0, a partida acaba">
+            <b>{t('Turno {0}', state.turn)}</b>
+            <small>{t('Era {0} · {1}', ERAS[state.era].name, ERAS[state.era].center)}</small>
+            <div className="hp" title={t('Vida do Centro: se chegar a 0, a partida acaba')}>
               <Sprite name="heart" size={16} /> <i><b style={{ transform: `scaleX(${Math.max(0, state.centerHp) / centerMax(state)})` }} /></i> {state.centerHp}/{centerMax(state)}
             </div>
           </div>
         </div>
-        <button className="endturn" onClick={() => act(() => endTurn(state), 'turn')} disabled={!!state.over || !!state.event}>Fim do turno</button>
+        <button className="endturn" onClick={() => act(() => endTurn(state), 'turn')} disabled={!!state.over || !!state.event}>{t('Fim do turno')}</button>
       </div>
 
       {/* ---------- esquerda: objetivo / contrato ---------- */}
       {/* No celular os cartões ficam recolhidos (só o título); tocar no título abre/fecha. */}
       <div className={`side ${sideOpen ? 'open' : ''}`} onClick={e => (e.target as HTMLElement).closest('header') && setSideOpen(!sideOpen)}>
         <div className="pcard">
-            <header className="gold">{last ? 'Marco Final' : `Rumo à Era ${NEXT_ERA_NAME[state.era]}`}</header>
+            <header className="gold">{last ? t('Marco Final') : t('Rumo à Era {0}', ERAS[state.era + 1].name)}</header>
             <div className="art sky"><Sprite name="campfire" size={70} /></div>
             {goals.map(g => (
               <div key={g.label} className={`goal ${g.have >= g.need ? 'ok' : ''}`}>
                 <span className="check">{g.have >= g.need ? '✔' : '○'}</span>
                 {g.kind === 'knowledge' ? <Sprite name="books" size={20} /> : g.kind === 'pop' ? <Sprite name="people" size={20} />
                   : <Art id={g.kind} size={20} />}
-                {g.label} <b>{Math.min(g.have, g.need)}/{g.need}</b>
+                {t(g.label)} <b>{Math.min(g.have, g.need)}/{g.need}</b>
               </div>
             ))}
-            <button className="opt green" disabled={!ready} onClick={() => act(() => advanceEra(state))}><b>{last ? 'Concluir civilização' : 'Avançar era'}</b></button>
-            <p className="muted">Próximo evento em {nextEvent} turno{nextEvent > 1 ? 's' : ''}</p>
+            <button className="opt green" disabled={!ready} onClick={() => act(() => advanceEra(state))}><b>{t(last ? 'Concluir civilização' : 'Avançar era')}</b></button>
+            <p className="muted">{t(nextEvent > 1 ? 'Próximo evento em {0} turnos' : 'Próximo evento em 1 turno', nextEvent)}</p>
         </div>
 
         {state.era > 0 && (
           <div className="pcard">
-            <header className="blue">Contrato</header>
+            <header className="blue">{t('Contrato')}</header>
             {contract ? (() => {
               const active = state.contracts.includes(contract)
               // Aceito: prazo para entregar. Oferta: quando ela some da mesa (a mais antiga roda a cada CONTRACT_EVERY turnos).
@@ -352,30 +354,30 @@ export function App() {
               <>
                 <div className="art sky">
                   <Sprite name="banner" size={70} />
-                  {left !== null && <span className={`timer ${active && left <= 2 ? 'urgent' : ''}`} title={active ? 'Turnos para entregar' : 'Turnos até a oferta sumir'}>⏱ {left}</span>}
+                  {left !== null && <span className={`timer ${active && left <= 2 ? 'urgent' : ''}`} title={t(active ? 'Turnos para entregar' : 'Turnos até a oferta sumir')}>⏱ {left}</span>}
                 </div>
                 <h4>{CONTRACTS[contract.def].client}</h4>
-                <p className="reward">{active ? 'Falta' : 'Pede'}: <Cost b={contract.left} /></p>
-                <p className="reward">Paga: <span className="chip"><ResIcon r="money" />{contractReward(state, contract)}</span> <span className="chip"><Sprite name="star" size={16} />{CONTRACTS[contract.def].rep}</span></p>
+                <p className="reward">{t(active ? 'Falta' : 'Pede')}: <Cost b={contract.left} /></p>
+                <p className="reward">{t('Paga')}: <span className="chip"><ResIcon r="money" />{contractReward(state, contract)}</span> <span className="chip"><Sprite name="star" size={16} />{CONTRACTS[contract.def].rep}</span></p>
                 {active ? (
                   <div className="optrow">
-                    <button className="opt green" onClick={() => act(() => deliver(state, contract.id), 'coin')}><b>Entregar</b></button>
-                    <button className="opt dark" title={`Perde o que já entregou e ${CONTRACTS[contract.def].rep} ⭐ (vencer o prazo custa ${2 * CONTRACTS[contract.def].rep} ⭐)`}
-                      onClick={() => act(() => abandon(state, contract.id), 'uncard')}><b>Desistir</b><span>−{CONTRACTS[contract.def].rep} ⭐</span></button>
+                    <button className="opt green" onClick={() => act(() => deliver(state, contract.id), 'coin')}><b>{t('Entregar')}</b></button>
+                    <button className="opt dark" title={t('Perde o que já entregou e {0} ⭐ (vencer o prazo custa {1} ⭐)', CONTRACTS[contract.def].rep, 2 * CONTRACTS[contract.def].rep)}
+                      onClick={() => act(() => abandon(state, contract.id), 'uncard')}><b>{t('Desistir')}</b><span>−{CONTRACTS[contract.def].rep} ⭐</span></button>
                   </div>
                 ) : (
                   <div className="optrow">
                     <button className="opt green" disabled={state.contracts.length >= maxContracts(state)} onClick={() => act(() => accept(state, contract.id), 'card')}>
-                      <b>Aceitar</b>{maxContracts(state) === 0 && <span>precisa de um Mercado</span>}
+                      <b>{t('Aceitar')}</b>{maxContracts(state) === 0 && <span>{t('precisa de um Mercado')}</span>}
                     </button>
-                    <button className="opt dark" title="Descarta esta oferta e chega outra" onClick={() => act(() => decline(state, contract.id), 'uncard')}>
-                      <b>Recusar</b><span>{DECLINE_COST} ✋</span>
+                    <button className="opt dark" title={t('Descarta esta oferta e chega outra')} onClick={() => act(() => decline(state, contract.id), 'uncard')}>
+                      <b>{t('Recusar')}</b><span>{DECLINE_COST} ✋</span>
                     </button>
                   </div>
                 )}
               </>
               )
-            })() : <p className="muted">Construa um 🏪 Mercado para receber contratos.</p>}
+            })() : <p className="muted">{t('Construa um 🏪 Mercado para receber contratos.')}</p>}
           </div>
         )}
       </div>
@@ -384,7 +386,7 @@ export function App() {
       {card && (
         <div className="stage" key={state.event}>
           <div className="pcard event">
-            <header className="red">Evento</header>
+            <header className="red">{t('Evento')}</header>
             <div className="art forest"><Sprite name={EVENT_ART[card.id] ?? 'forest'} size={110} /></div>
             <h4>{card.title}</h4>
             <p>{card.text}</p>
@@ -405,10 +407,10 @@ export function App() {
       <div className="right">
         <Minimap state={state} />
         <div className="roundbtns">
-          <button className={`round ${hand ? 'on' : ''}`} title="Construir" onClick={() => setHand(!hand)}><Sprite name="hammer" size={34} /></button>
-          <button className={`round ${wreck ? 'on' : ''}`} title="Demolir: volta metade do material" onClick={() => { sfx(wreck ? 'uncard' : 'card'); setWreck(!wreck); setMode(null); setLink(null) }}><Sprite name="tools" size={34} /></button>
-          {state.era > 0 && <button className={`round market ${panel === 'trade' ? 'on' : ''}`} title="Mercado e contratos" onClick={() => toggle('trade')}><Sprite name="market" size={34} /></button>}
-          <button className={`round ${panel === 'log' ? 'on' : ''}`} title="Registro" onClick={() => toggle('log')}><Sprite name="scroll" size={34} /></button>
+          <button className={`round ${hand ? 'on' : ''}`} title={t('Construir')} onClick={() => setHand(!hand)}><Sprite name="hammer" size={34} /></button>
+          <button className={`round ${wreck ? 'on' : ''}`} title={t('Demolir: volta metade do material')} onClick={() => { sfx(wreck ? 'uncard' : 'card'); setWreck(!wreck); setMode(null); setLink(null) }}><Sprite name="tools" size={34} /></button>
+          {state.era > 0 && <button className={`round market ${panel === 'trade' ? 'on' : ''}`} title={t('Mercado e contratos')} onClick={() => toggle('trade')}><Sprite name="market" size={34} /></button>}
+          <button className={`round ${panel === 'log' ? 'on' : ''}`} title={t('Registro')} onClick={() => toggle('log')}><Sprite name="scroll" size={34} /></button>
           <button className={`round ${panel === 'menu' ? 'on' : ''}`} title="Menu" onClick={() => toggle('menu')}><Sprite name="gear" size={34} /></button>
         </div>
       </div>
@@ -416,16 +418,17 @@ export function App() {
       {panel === 'trade' && <Trade state={state} act={act} onClose={() => setPanel(null)} />}
       {panel === 'log' && (
         <div className="popover frame">
-          <h3>📜 Registro</h3>
+          <h3>📜 {t('Registro')}</h3>
           {state.log.map((m, i) => <div key={i} style={{ opacity: 1 - i * 0.12 }}>{m}</div>)}
         </div>
       )}
       {panel === 'menu' && (
         <div className="popover frame">
           <h3>⚙️ Menu</h3>
-          <button className="opt dark" onClick={() => { setPanel(null); setTut(null); setScreen('menu') }}><b>Menu principal</b></button>
-          <button className="opt dark" onClick={() => play(newGame())}><b>Nova civilização</b></button>
-          <button className="opt dark" onClick={() => { setMuted(!mute); setMute(!mute); if (mute) sfx('click') }}><b>{mute ? '🔇 Som desligado' : '🔊 Som ligado'}</b></button>
+          <button className="opt dark" onClick={() => { setPanel(null); setTut(null); setScreen('menu') }}><b>{t('Menu principal')}</b></button>
+          <button className="opt dark" onClick={() => play(newGame())}><b>{t('Nova civilização')}</b></button>
+          <button className="opt dark" onClick={() => { setMuted(!mute); setMute(!mute); if (mute) sfx('click') }}><b>{t(mute ? '🔇 Som desligado' : '🔊 Som ligado')}</b></button>
+          <LangToggle />
         </div>
       )}
 
@@ -441,10 +444,10 @@ export function App() {
           <div className="hand" onClickCapture={e => { if (MOBILE() && !deck) { e.stopPropagation(); sfx('card'); setDeck(true) } }}>
             {links.map((l, i) => (
               <button key={l} style={fan(i)} className={`card infra ${link === l ? 'sel' : ''}`} onClick={() => { sfx(link === l ? 'uncard' : 'card'); pickLink(link === l ? null : l) }} onMouseEnter={() => sfx('hover')}
-                title="Borda entre hexes · montanha custa o dobro · rio exige ponte (+2 🪵)">
+                title={t('Borda entre hexes · montanha custa o dobro · rio exige ponte (+2 🪵)')}>
                 <header>{LINKS[l].name}</header>
                 <div className="art"><Art id={l} /></div>
-                <p>{l === 'trail' ? 'Produção ligada ao Centro rende o dobro.' : l === 'road' ? 'Minas rendem o dobro.' : 'Indústria pesada rende o dobro.'}</p>
+                <p>{t(l === 'trail' ? 'Produção ligada ao Centro rende o dobro.' : l === 'road' ? 'Minas rendem o dobro.' : 'Indústria pesada rende o dobro.')}</p>
                 <footer><span className="chip"><Sprite name="hand" size={16} />{LINKS[l].actions}</span><Cost b={LINKS[l].cost} /></footer>
               </button>
             ))}
@@ -452,11 +455,11 @@ export function App() {
               const b = BUILDINGS[id]
               const err = affordable(state, id)
               const owe = shortfall(state, id)
-              const where = terrainsOf(id).map(t => TERRAINS[t].name).join(' / ') + (b.from ? ` ou ⬆ ${BUILDINGS[b.from].name}` : '')
+              const where = terrainsOf(id).map(t => TERRAINS[t].name).join(' / ') + (b.from ? t(' ou ⬆ {0}', BUILDINGS[b.from].name) : '')
               return (
                 <button key={id} style={fan(links.length + i)} className={`card ${b.cat} ${mode === id ? 'sel' : ''} ${err ? 'off' : owe ? 'debt' : ''}`}
                   onClick={() => { sfx(mode === id ? 'uncard' : 'card'); pickBuilding(mode === id ? null : id) }} onMouseEnter={() => sfx('hover')}
-                  title={[where, id !== 'lumber' && b.terrains.includes('forest') ? 'derruba floresta' : '', err ?? owe ?? ''].filter(Boolean).join(' · ')}>
+                  title={[where, id !== 'lumber' && b.terrains.includes('forest') ? t('derruba floresta') : '', err ?? owe ?? ''].filter(Boolean).join(' · ')}>
                   <header>{b.name}</header>
                   <div className="art"><Art id={id} /></div>
                   <p>{b.desc}</p>
@@ -473,9 +476,9 @@ export function App() {
         </div>
       )}
 
-      {wreck && <div className="hint frame">Demolir ({DEMOLISH_COST} ✋): toque numa construção · volta metade do material <button className="x" onClick={() => { sfx('uncard'); setWreck(false) }}>✕</button></div>}
-      {mode && <div className="hint frame">{mode === 'railway' ? (railFrom ? (railTo ? 'Ferrovia: toque de novo no destino para construir' : 'Ferrovia: toque no destino (a rota acende com o custo)') : 'Ferrovia: toque na origem — Centro, trilho ou hex livre') : `${BUILDINGS[mode].name}: escolha um hex destacado`} <button className="x" onClick={() => { sfx('uncard'); pickBuilding(null) }}>✕</button></div>}
-      {link && <div className="hint frame">{LINKS[link].name}: toque numa borda entre dois hexes <button className="x" onClick={() => { sfx('uncard'); pickLink(null) }}>✕</button></div>}
+      {wreck && <div className="hint frame">{t('Demolir ({0} ✋): toque numa construção · volta metade do material', DEMOLISH_COST)} <button className="x" onClick={() => { sfx('uncard'); setWreck(false) }}>✕</button></div>}
+      {mode && <div className="hint frame">{mode === 'railway' ? t(railFrom ? (railTo ? 'Ferrovia: toque de novo no destino para construir' : 'Ferrovia: toque no destino (a rota acende com o custo)') : 'Ferrovia: toque na origem — Centro, trilho ou hex livre') : t('{0}: escolha um hex destacado', BUILDINGS[mode].name)} <button className="x" onClick={() => { sfx('uncard'); pickBuilding(null) }}>✕</button></div>}
+      {link && <div className="hint frame">{t('{0}: toque numa borda entre dois hexes', LINKS[link].name)} <button className="x" onClick={() => { sfx('uncard'); pickLink(null) }}>✕</button></div>}
       {toast && <div className="toast frame">{toast}</div>}
       {!toast && news && <div className="news frame">{news}</div>}
 
@@ -485,26 +488,31 @@ export function App() {
       {state.over && (
         <div className="over">
           <div className="pcard big">
-            <header className={state.over === 'won' ? 'gold' : 'red'}>{state.over === 'won' ? 'Vitória' : 'Derrota'}</header>
+            <header className={state.over === 'won' ? 'gold' : 'red'}>{t(state.over === 'won' ? 'Vitória' : 'Derrota')}</header>
             {state.over === 'won' ? (
               <>
-                <h2>Civilização concluída!</h2>
-                <p>Da fogueira à {ERAS[state.era].center} em {state.turn} turnos, com {state.pop} 👤 e {state.rep} ⭐.</p>
-                <button className="opt dark" onClick={() => setState(keepPlaying(state))}><b>Continuar jogando</b><span>sem fim, no mesmo tabuleiro</span></button>
+                <h2>{t('Civilização concluída!')}</h2>
+                <p>{t('Da fogueira à {0} em {1} turnos, com {2} 👤 e {3} ⭐.', ERAS[state.era].center, state.turn, state.pop, state.rep)}</p>
+                <button className="opt dark" onClick={() => setState(keepPlaying(state))}><b>{t('Continuar jogando')}</b><span>{t('sem fim, no mesmo tabuleiro')}</span></button>
               </>
             ) : (
               <>
-                <h2>A fogueira se apagou</h2>
-                <p>Sua tribo sobreviveu {state.turn} turnos.</p>
+                <h2>{t('A fogueira se apagou')}</h2>
+                <p>{t('Sua tribo sobreviveu {0} turnos.', state.turn)}</p>
               </>
             )}
-            <button className="opt green" onClick={() => play(newGame())}><b>Nova civilização</b></button>
+            <button className="opt green" onClick={() => play(newGame())}><b>{t('Nova civilização')}</b></button>
           </div>
         </div>
       )}
     </>
   )
 }
+
+// Alterna pt ⇄ en (recarrega; a partida já está salva).
+const LangToggle = () => (
+  <button className="opt dark" onClick={() => setLang(lang === 'pt' ? 'en' : 'pt')}><b>🌐 {lang === 'pt' ? 'Português' : 'English'}</b></button>
+)
 
 function Stat({ icon, value, delta, title, cls = '' }: { icon: React.ReactNode; value: number | string; delta?: number; title: string; cls?: string }) {
   return (

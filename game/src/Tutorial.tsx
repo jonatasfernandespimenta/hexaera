@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { BUILDINGS, CONTRACTS, THREATS, type BuildingId } from './core/data'
 import { terrainAt, type State } from './core/game'
 import { key, neighbors } from './core/hex'
+import { t } from './i18n'
 
 // Tutorial guiado sobre uma partida de verdade: cada passo pode preparar o estado (setup) e
 // avança sozinho quando o jogador faz o que foi pedido (done); sem done, avança com "Próximo".
@@ -149,12 +150,12 @@ export function Coach({ idx, onNext, onSkip, onFinish }: Props) {
 
   return (
     <div className="coach pcard" key={idx}>
-      <header className="gold">{step.title}<small>{idx + 1}/{STEPS.length}</small></header>
-      <p>{step.text}</p>
-      {last ? <button className="opt green" onClick={onFinish}><b>Começar partida</b></button>
-        : !step.done ? <button className="opt green" onClick={onNext}><b>Próximo</b></button>
-        : <p className="muted">👉 Faça a ação para continuar</p>}
-      {!last && <button className="skip" onClick={onSkip}>Pular tutorial</button>}
+      <header className="gold">{t(step.title)}<small>{idx + 1}/{STEPS.length}</small></header>
+      <p>{t(step.text)}</p>
+      {last ? <button className="opt green" onClick={onFinish}><b>{t('Começar partida')}</b></button>
+        : !step.done ? <button className="opt green" onClick={onNext}><b>{t('Próximo')}</b></button>
+        : <p className="muted">👉 {t('Faça a ação para continuar')}</p>}
+      {!last && <button className="skip" onClick={onSkip}>{t('Pular tutorial')}</button>}
     </div>
   )
 }

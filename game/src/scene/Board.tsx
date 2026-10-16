@@ -8,6 +8,7 @@ import { railNew, railPath, terrainAt, linked, offGrid, canLink, canPlace, cente
 import { distance, key, neighbors, parse, toWorld, type Hex } from '../core/hex'
 import { Table } from './Table'
 import { Sprite, type SpriteName } from '../Sprite'
+import { t } from '../i18n'
 
 // Ícone de cada ameaça, na ordem de THREATS (uma por era).
 const THREAT_ART: SpriteName[] = ['th_wolf', 'th_bandit', 'th_swords', 'th_army', 'th_dynamite', 'th_spy', 'th_cyber']
@@ -1324,34 +1325,34 @@ export function Board({ state, buildMode, linkMode, onHex, onEdge, fp, onExitFp,
               {wolves.map(w => <Invader key={w.id} hp={w.hp} kind={w.kind} />)}
             </Piece>
             {state.warnings.includes(k) && (
-              <Html zIndexRange={[50, 0]} center position={[0, 1.2 + lift, 0]} className="tip warn"><Sprite name={THREAT_ART[state.era]} size={18} /> ataque no próximo turno</Html>
+              <Html zIndexRange={[50, 0]} center position={[0, 1.2 + lift, 0]} className="tip warn"><Sprite name={THREAT_ART[state.era]} size={18} /> {t('ataque no próximo turno')}</Html>
             )}
             {b && b.hp < BUILDINGS[b.id].hp && (
               <Html zIndexRange={[50, 0]} center position={[0.4, 0.9 + lift, 0]} className="tip bad">❤️{b.hp}</Html>
             )}
             {why && hover !== k && (
-              <Html zIndexRange={[50, 0]} center position={[0, 0.85 + lift, 0]} className="tip bad">{STOP_SHORT[why]}</Html>
+              <Html zIndexRange={[50, 0]} center position={[0, 0.85 + lift, 0]} className="tip bad">{t(STOP_SHORT[why])}</Html>
             )}
             {half && hover !== k && (
-              <Html zIndexRange={[50, 0]} center position={[0, 0.85 + lift, 0]} className="tip warn">{STOP_SHORT[half]}</Html>
+              <Html zIndexRange={[50, 0]} center position={[0, 0.85 + lift, 0]} className="tip warn">{t(STOP_SHORT[half])}</Html>
             )}
             {preview && target === k && (
               <Html zIndexRange={[60, 0]} center position={[0, 1.15 + lift, 0]} className="tip route">
-                <b>Ferrovia · {fresh} trilho{fresh === 1 ? '' : 's'}</b>
-                <span className={railCost.actions > state.actions ? 'neg' : ''}>{railCost.actions} ✋ (tem {state.actions})</span>
+                <b>{t(fresh === 1 ? 'Ferrovia · 1 trilho' : 'Ferrovia · {0} trilhos', fresh)}</b>
+                <span className={railCost.actions > state.actions ? 'neg' : ''}>{railCost.actions} ✋ ({t('tem {0}', state.actions)})</span>
                 {(Object.entries(BUILDINGS.railway.cost) as [Res, number][]).map(([r]) => (
-                  <span key={r} className={railCost[r] > state.res[r] ? 'neg' : ''}>{railCost[r]} {RES[r].icon} (tem {state.res[r]})</span>
+                  <span key={r} className={railCost[r] > state.res[r] ? 'neg' : ''}>{railCost[r]} {RES[r].icon} ({t('tem {0}', state.res[r])})</span>
                 ))}
-                {railTo && <small>toque de novo para construir</small>}
+                {railTo && <small>{t('toque de novo para construir')}</small>}
               </Html>
             )}
             {hover === k && !preview && tile.terrain !== 'center' && (
               <Html zIndexRange={[50, 0]} center position={[0, 1.1 + lift, 0]} className="tip">
-                {wolves.length > 0 && !buildMode ? `Atacar ${THREATS[wolves[0].kind].name.toLowerCase()} · ${HUNT_COST} ✋ · ` : ''}
+                {wolves.length > 0 && !buildMode ? t('Atacar {0}', THREATS[wolves[0].kind].name.toLowerCase()) + ` · ${HUNT_COST} ✋ · ` : ''}
                 {TERRAINS[tile.terrain].name}
                 {b && ` · ${BUILDINGS[b.id].name}${b.turnsLeft ? ` (⏱ ${b.turnsLeft})` : ''}`}
-                {why && ` · ⛔ ${why}`}
-                {half && ` · rende metade: ${half}`}
+                {why && ` · ⛔ ${t(why)}`}
+                {half && ` · ${t('rende metade: {0}', t(half))}`}
               </Html>
             )}
           </group>

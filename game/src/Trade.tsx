@@ -3,6 +3,7 @@ import {
   abandon, accept, buyPrice, decline, DECLINE_COST, contractReward, deliver, maxContracts, sellPrice, trade, tradeLimit, type Contract, type State,
 } from './core/game'
 import type { Sfx } from './sfx'
+import { t } from './i18n'
 
 type Props = { state: State; act: (fn: () => State, s?: Sfx) => void; onClose: () => void }
 
@@ -21,13 +22,13 @@ export function Trade({ state, act, onClose }: Props) {
       <div key={c.id} className="contract">
         <b>{d.client}</b>
         <span>{bag(c.left)}</span>
-        <small>⏱ {c.turns} turnos · {contractReward(state, c)} 💰 · +{d.rep} ⭐ (falha −{2 * d.rep})</small>
+        <small>{t('⏱ {0} turnos · {1} 💰 · +{2} ⭐ (falha −{3})', c.turns, contractReward(state, c), d.rep, 2 * d.rep)}</small>
         {active ? <>
-          <button onClick={() => act(() => deliver(state, c.id), 'coin')}>Entregar</button>
-          <button onClick={() => act(() => abandon(state, c.id), 'uncard')}>Desistir (−{d.rep} ⭐)</button>
+          <button onClick={() => act(() => deliver(state, c.id), 'coin')}>{t('Entregar')}</button>
+          <button onClick={() => act(() => abandon(state, c.id), 'uncard')}>{t('Desistir (−{0} ⭐)', d.rep)}</button>
         </> : <>
-          <button onClick={() => act(() => accept(state, c.id), 'card')}>Aceitar</button>
-          <button onClick={() => act(() => decline(state, c.id), 'uncard')}>Recusar ({DECLINE_COST} ✋)</button>
+          <button onClick={() => act(() => accept(state, c.id), 'card')}>{t('Aceitar')}</button>
+          <button onClick={() => act(() => decline(state, c.id), 'uncard')}>{t('Recusar ({0} ✋)', DECLINE_COST)}</button>
         </>}
       </div>
     )
@@ -36,32 +37,32 @@ export function Trade({ state, act, onClose }: Props) {
   return (
     <div className="trade frame">
       <header>
-        <h3>🏪 Mercado</h3>
+        <h3>🏪 {t('Mercado')}</h3>
         <button className="x" onClick={onClose}>✕</button>
       </header>
       {limit === 0 ? (
-        <p className="muted">Construa um Mercado conectado ao Centro para negociar e aceitar contratos.</p>
+        <p className="muted">{t('Construa um Mercado conectado ao Centro para negociar e aceitar contratos.')}</p>
       ) : (
         <>
-          <p className="muted">Negociado neste turno: {state.traded}/{limit} · Shift = 5 unidades</p>
+          <p className="muted">{t('Negociado neste turno: {0}/{1} · Shift = 5 unidades', state.traded, limit)}</p>
           <table>
             <tbody>
               {goods.map(r => (
                 <tr key={r}>
                   <td>{RES[r].icon} {RES[r].name}</td>
                   <td>{state.res[r]}</td>
-                  <td><button onClick={e => act(() => trade(state, r, -qty(e)), 'coin')}>Vender {sellPrice(state, r)}💰</button></td>
-                  <td><button onClick={e => act(() => trade(state, r, qty(e)), 'coin')}>Comprar {buyPrice(state, r)}💰</button></td>
+                  <td><button onClick={e => act(() => trade(state, r, -qty(e)), 'coin')}>{t('Vender {0}💰', sellPrice(state, r))}</button></td>
+                  <td><button onClick={e => act(() => trade(state, r, qty(e)), 'coin')}>{t('Comprar {0}💰', buyPrice(state, r))}</button></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </>
       )}
-      <h3>📜 Contratos <small>ativos {state.contracts.length}/{maxContracts(state)}</small></h3>
+      <h3>📜 {t('Contratos')} <small>{t('ativos {0}/{1}', state.contracts.length, maxContracts(state))}</small></h3>
       {state.contracts.map(c => card(c, true))}
       {state.offers.map(c => card(c, false))}
-      {!state.offers.length && !state.contracts.length && <p className="muted">Nenhuma oferta ainda (chegam com o Mercado).</p>}
+      {!state.offers.length && !state.contracts.length && <p className="muted">{t('Nenhuma oferta ainda (chegam com o Mercado).')}</p>}
     </div>
   )
 }

@@ -205,7 +205,6 @@ export const ERAS: { name: string; center: string; idle: number; goal: { knowled
   { name: 'Moderna', center: 'Centro Urbano', idle: 2, goal: { knowledge: 800, pop: 110, building: 'carplant' } },
   { name: 'Contemporânea', center: 'Metrópole', idle: 2, goal: { knowledge: 1300, pop: 160, building: 'landmark' } },
 ]
-export const NEXT_ERA_NAME = ERAS.slice(1).map(e => e.name)
 
 // ☁️ poluição: 0–100; cada floresta limpa 1 por turno; felicidade perde ☁️/2.
 export const FOREST_CLEAN = 1
