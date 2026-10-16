@@ -1,0 +1,95 @@
+// Lógica pura das partidas online sobre um Store. Cada jogador só escreve a própria chave de assento.
+import type { Mode } from '../core/match'
+import type { Convoy } from '../core/convoy'
+import type { State } from '../core/game'
+import type { Store } from './store'
+
+export class HttpError extends Error {
+  constructor(public status: number, message: string) { super(message) }
+}
+
+export type Meta = { id: string; mode: Mode; fast: boolean; timer: number; seed: number; names: [string, string | null] }
+export type SeatRec = { token: string; turn: number; state: State | null; sent: Convoy[]; votes: number[]; seen: number }
+export type RivalView = Omit<SeatRec, 'token'> & { online: boolean }
+
+const ONLINE_MS = 10_000
+const ALFA = 'abcdefghijklmnopqrstuvwxyz0123456789'
+const kMeta = (id: string) => `m:${id}`
+const kSeat = (id: string, s: 0 | 1) => `m:${id}:s${s}`
+
+const newSeat = (): SeatRec => ({ token: crypto.randomUUID(), turn: 0, state: null, sent: [], votes: [], seen: Date.now() })
+
+function cleanName(name: unknown) {
+  if (typeof name !== 'string' || !name.trim()) throw new HttpError(400, 'Nome inválido.')
+  return name.trim().slice(0, 20)
+}
+
+export async function createMatch(st: Store, o: { mode: Mode; fast: boolean; timer: number; name: string }) {
+  if (o.mode !== 'coop' && o.mode !== 'versus') throw new HttpError(400, 'Modo inválido.')
+  if (![0, 60, 90].includes(o.timer)) throw new HttpError(400, 'Tempo inválido.')
+  const name = cleanName(o.name)
+  const rec = newSeat()
+  for (let i = 0; i < 5; i++) {
+    const id = Array.from(crypto.getRandomValues(new Uint8Array(6)), b => ALFA[b % ALFA.length]).join('')
+    const meta: Meta = { id, mode: o.mode, fast: !!o.fast, timer: o.timer, seed: Math.floor(Math.random() * 2 ** 31), names: [name, null] }
+    if (!(await st.setnx(kMeta(id), meta))) continue
+    await st.set(kSeat(id, 0), rec)
+    return { id, seat: 0 as const, token: rec.token }
+  }
+  throw new HttpError(500, 'Não foi possível criar a partida.')
+}
+
+async function getMeta(st: Store, id: string) {
+  const meta = await st.get<Meta>(kMeta(id))
+  if (!meta) throw new HttpError(404, 'Partida não encontrada.')
+  return meta
+}
+
+export async function joinMatch(st: Store, id: string, name: string) {
+  const n = cleanName(name)
+  const meta = await getMeta(st, id)
+  const rec = newSeat()
+  if (!(await st.setnx(kSeat(id, 1), rec))) throw new HttpError(409, 'Partida cheia.')
+  meta.names[1] = n
+  await st.set(kMeta(id), meta)
+  return { seat: 1 as const, token: rec.token }
+}
+
+async function auth(st: Store, id: string, token: unknown) {
+  const meta = await getMeta(st, id)
+  const [a, b] = await Promise.all([st.get<SeatRec>(kSeat(id, 0)), st.get<SeatRec>(kSeat(id, 1))])
+  const recs = [a, b]
+  const seat = typeof token === 'string' && token ? ([0, 1] as const).find(s => recs[s]?.token === token) : undefined
+  if (seat === undefined) throw new HttpError(403, 'Token inválido.')
+  return { meta, seat, me: recs[seat]!, rival: recs[1 - seat] ?? null }
+}
+
+export async function viewMatch(st: Store, id: string, token: string) {
+  const { meta, seat, me, rival } = await auth(st, id, token)
+  me.seen = Date.now()
+  await st.set(kSeat(id, seat), me)
+  let r: RivalView | null = null
+  if (rival) {
+    const { token: _t, ...pub } = rival
+    r = { ...pub, online: Date.now() - rival.seen < ONLINE_MS }
+  }
+  return { meta, seat, me, rival: r }
+}
+
+export async function submitTurn(st: Store, id: string, token: string, b: { turn: number; sent: Convoy[]; vote: boolean }) {
+  const { seat, me } = await auth(st, id, token)
+  if (b.turn !== me.turn + 1) throw new HttpError(409, 'Turno fora de ordem.')
+  if (!Array.isArray(b.sent)) throw new HttpError(400, 'Envios inválidos.')
+  me.turn = b.turn
+  me.sent.push(...b.sent)
+  if (b.vote) me.votes.push(b.turn)
+  me.seen = Date.now()
+  await st.set(kSeat(id, seat), me)
+}
+
+export async function putState(st: Store, id: string, token: string, state: State) {
+  const { seat, me } = await auth(st, id, token)
+  if (!state || typeof state !== 'object') throw new HttpError(400, 'Estado inválido.')
+  me.state = state
+  await st.set(kSeat(id, seat), me)
+}
