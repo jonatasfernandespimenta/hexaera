@@ -3,6 +3,7 @@ import { RES, THREATS, type Bag, type Res } from './data'
 import { guard, idle, log, terrainAt, type State } from './game'
 import { distance, key, neighbors, parse } from './hex'
 import { RIVAL_DISTANCE } from './match'
+import { t as tr } from '../i18n'
 
 export type Convoy = {
   id: string; kind: 'army' | 'aid' | 'cargo'; sent: number; arrive: number
@@ -16,9 +17,9 @@ export const travelTurns = (s: State) => Math.ceil(RIVAL_DISTANCE / (s.match!.fa
 
 function check(s: State, mode: 'coop' | 'versus', n: number) {
   guard(s)
-  if (!s.match) throw new Error('Só há comitivas em partida online.')
-  if (s.match.mode !== mode) throw new Error(mode === 'versus' ? 'Exércitos só no versus.' : 'Ajuda e cargas só no coop.')
-  if (!Number.isInteger(n) || n < 1) throw new Error('Quantidade inválida.')
+  if (!s.match) throw new Error(tr('Só há comitivas em partida online.'))
+  if (s.match.mode !== mode) throw new Error(tr(mode === 'versus' ? 'Exércitos só no versus.' : 'Ajuda e cargas só no coop.'))
+  if (!Number.isInteger(n) || n < 1) throw new Error(tr('Quantidade inválida.'))
 }
 
 function mk(s: State, kind: Convoy['kind'], extra: Partial<Convoy>): Convoy {
@@ -27,7 +28,7 @@ function mk(s: State, kind: Convoy['kind'], extra: Partial<Convoy>): Convoy {
 
 function sendTroops(prev: State, mode: 'coop' | 'versus', kind: 'army' | 'aid', n: number) {
   check(prev, mode, n)
-  if (n > prev.troops) throw new Error('Tropas insuficientes.')
+  if (n > prev.troops) throw new Error(tr('Tropas insuficientes.'))
   const s = structuredClone(prev)
   s.troops -= n
   return { state: s, convoy: mk(s, kind, kind === 'army' ? { n, power: s.era } : { n }) }
@@ -40,9 +41,9 @@ export function sendCargo(prev: State, bag: Bag) {
   const items = (Object.entries(bag) as [Res, number][]).filter(([, v]) => v)
   const total = items.reduce((n, [, v]) => n + v, 0)
   check(prev, 'coop', total)
-  if (items.some(([r, v]) => v < 0 || prev.res[r] < v)) throw new Error('Recursos insuficientes.')
+  if (items.some(([r, v]) => v < 0 || prev.res[r] < v)) throw new Error(tr('Recursos insuficientes.'))
   const n = Math.ceil(total / CARGO_PER_WORKER[prev.era])
-  if (n > idle(prev)) throw new Error('Faltam 👤 ociosos para carregar.')
+  if (n > idle(prev)) throw new Error(tr('Faltam 👤 ociosos para carregar.'))
   const s = structuredClone(prev)
   for (const [r, v] of items) s.res[r] -= v
   s.away.push({ n, back: s.turn + 2 * travelTurns(s) })
@@ -87,13 +88,13 @@ export function receive(prev: State, arrivals: Convoy[]): State {
     if (!mode || !validConvoy(c, mode)) continue
     if (c.kind === 'army') {
       s.raids.push({ at: raidHex(s), kind: c.power ?? 0, n: c.n ?? 0 })
-      log(s, '⚠️ Exército inimigo chega no próximo turno!')
+      log(s, tr('⚠️ Exército inimigo chega no próximo turno!'))
     } else if (c.kind === 'aid') {
       s.troops += c.n ?? 0
-      log(s, `🛡️ Chegaram ${c.n} tropas de ajuda!`)
+      log(s, tr('🛡️ Chegaram {0} tropas de ajuda!', c.n ?? 0))
     } else {
       for (const [r, v] of Object.entries(c.bag ?? {}) as [Res, number][]) s.res[r] += v
-      log(s, '📦 Chegou uma carga do parceiro!')
+      log(s, tr('📦 Chegou uma carga do parceiro!'))
     }
   }
   return s

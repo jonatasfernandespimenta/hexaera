@@ -4,13 +4,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Convoy } from './core/convoy'
 import { guard, type State } from './core/game'
 import { newMatchGame, normalize, settle } from './core/match'
+import { t } from './i18n'
 import { getCreds, putState, submit, view, type Creds, type View } from './net'
 import { closeTurn, phase as phaseOf, type Phase } from './online'
 import type { Meta, RivalView } from './server/matches'
 
 export type OnlinePhase = 'loading' | Phase | 'error'
 
-const msg = (e: unknown) => (e instanceof Error ? e.message : 'Erro de conexão.')
+const msg = (e: unknown) => (e instanceof Error ? e.message : t('Erro de conexão.'))
 
 // Sem partida (id null) não faz nada: fica em 'loading' com tudo null.
 export function useOnline(id: string | null) {
@@ -84,7 +85,7 @@ export function useOnline(id: string | null) {
     setPhase('loading'); setError(null); setOutbox([]); setVote(false)
     setMeta(null); setSeat(null); setRival(null); setLocal(null); setSent([])
     if (!id) return
-    if (!creds) { setPhase('error'); setError('Você não está nesta partida.'); return }
+    if (!creds) { setPhase('error'); setError(t('Você não está nesta partida.')); return }
     run(async () => {
       const v = await view(id, creds.token)
       if (!alive) return

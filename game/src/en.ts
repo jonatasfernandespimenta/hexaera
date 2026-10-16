@@ -271,4 +271,50 @@ export const EN: Record<string, string> = {
   'Pronto!': 'Ready!',
   'Vença concluindo o Marco Final da Era Contemporânea. Se o ❤️ do Centro ou a 👤 população zerar, a partida acaba. Boa sorte!':
     'Win by completing the Final Landmark of the Contemporary Age. If the Center ❤️ or 👤 population hits zero, the game ends. Good luck!',
+
+  // ---------- multiplayer ----------
+  'Campo de guerra': 'War Camp', 'recruta tropas (partida online)': 'recruits troops (online match)',
+  // menu, sala
+  'Jogar online': 'Play online', 'coop ou versus com um amigo': 'co-op or versus with a friend',
+  'Erro de conexão.': 'Connection error.', 'Erro {0}.': 'Error {0}.', 'Apelido': 'Nickname', 'seu nome': 'your name',
+  'Mande este link para o outro jogador': 'Send this link to the other player', 'Copiado!': 'Copied!', 'Copiar': 'Copy',
+  'Esperando o segundo jogador…': 'Waiting for the second player…', 'Conectando…': 'Connecting…',
+  'Entrar na partida': 'Join match', 'Entrando…': 'Joining…', 'Entrar': 'Join', 'Modo': 'Mode',
+  'Ritmo rápido': 'Fast pace', 'Ligado': 'On', 'Relógio por turno': 'Turn timer',
+  'Criando…': 'Creating…', 'Criar partida': 'Create match', 'gera um link para o amigo': 'makes a link for your friend',
+  'Você não está nesta partida.': 'You are not in this match.',
+  // partida
+  'rival': 'rival', 'Enviando o turno…': 'Sending the turn…', 'Esperando {0}…': 'Waiting for {0}…',
+  'Comitiva a caminho: chega no turno {0}': 'Convoy on the way: arrives on turn {0}',
+  'Voto registrado ✔': 'Vote cast ✔', 'Votar para avançar': 'Vote to advance', '{0} votou': '{0} voted', '{0} ainda não votou': "{0} hasn't voted yet",
+  'Minha cidade': 'My city', 'Ver rival': 'View rival', 'Partida online · {0} turnos · Era {1}.': 'Online match · {0} turns · {1} Age.',
+  'Vitória — o Centro de {0} caiu': "Victory — {0}'s Center fell", 'Derrota — seu Centro caiu': 'Defeat — your Center fell',
+  'Civilização concluída juntos': 'Civilization completed together', 'Um Centro caiu — a dupla perdeu': 'A Center fell — the pair lost',
+  'carregando…': 'loading…', 'desconectado — partida pausada': 'disconnected — match paused', 'pronto': 'ready', 'jogando': 'playing',
+  // painel militar
+  'Tropas e cargas': 'Troops and cargo', 'Tropas: {0}': 'Troops: {0}', '👤 {0} carregando': '👤 {0} carrying', 'Tropas': 'Troops',
+  'Recrutar': 'Recruit', 'Atacar com {0}': 'Attack with {0}', 'chega no turno {0}': 'arrives on turn {0}',
+  'Enviar ajuda ({0})': 'Send aid ({0})', 'Enviar carga': 'Send cargo', 'Escolha o que levar.': 'Choose what to carry.',
+  '{0} 👤 de {1} ociosos · chega no turno {2}': '{0} 👤 of {1} idle · arrives on turn {2}',
+  'Saindo neste turno: {0}': 'Leaving this turn: {0}', '{0} ({1}) chega no turno {2}': '{0} ({1}) arrives on turn {2}',
+  '⚔️ exército': '⚔️ army', '🛡️ ajuda': '🛡️ aid', '📦 carga': '📦 cargo',
+  // regras (core)
+  'Fronteira neutra.': 'Neutral border.', 'Só há tropas em partida online.': 'Troops exist only in online matches.',
+  'Precisa de um Campo de guerra funcionando.': 'Needs a working War Camp.', 'Precisa deixar ao menos 1 👤.': 'Must leave at least 1 👤.',
+  '🛡 Uma tropa caiu defendendo o Centro.': '🛡 A troop fell defending the Center.',
+  'No versus, vence quem derrubar o outro Centro.': 'In versus, whoever topples the other Center wins.',
+  'Só há comitivas em partida online.': 'Convoys exist only in online matches.', 'Exércitos só no versus.': 'Armies only in versus.',
+  'Ajuda e cargas só no coop.': 'Aid and cargo only in co-op.', 'Quantidade inválida.': 'Invalid amount.',
+  'Tropas insuficientes.': 'Not enough troops.', 'Recursos insuficientes.': 'Not enough resources.',
+  'Faltam 👤 ociosos para carregar.': 'Not enough idle 👤 to carry it.',
+  '⚠️ Exército inimigo chega no próximo turno!': '⚠️ Enemy army arrives next turn!',
+  '🛡️ Chegaram {0} tropas de ajuda!': '🛡️ {0} aid troops arrived!', '📦 Chegou uma carga do parceiro!': '📦 Cargo arrived from your partner!',
+  // erros da API (o servidor responde em português; net.ts traduz)
+  'Erro interno.': 'Internal error.', 'JSON inválido.': 'Invalid JSON.', 'Corpo inválido.': 'Invalid body.',
+  'Nome inválido.': 'Invalid name.', 'Modo inválido.': 'Invalid mode.', 'Tempo inválido.': 'Invalid timer.',
+  'Não foi possível criar a partida.': 'Could not create the match.', 'Partida não encontrada.': 'Match not found.',
+  'Partida cheia.': 'Match is full.', 'Token inválido.': 'Invalid token.', 'Turno inválido.': 'Invalid turn.',
+  'Envios inválidos.': 'Invalid convoys.', 'Comitiva inválida.': 'Invalid convoy.', 'Turno fora de ordem.': 'Turn out of order.',
+  'Estado inválido.': 'Invalid state.', 'Estado grande demais.': 'State too large.',
+  'Servidor de partidas indisponível.': 'Match server unavailable.',
 }

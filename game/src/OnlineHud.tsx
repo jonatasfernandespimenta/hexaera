@@ -4,6 +4,7 @@ import { sendAid, sendArmy, sendCargo, travelTurns, type Convoy } from './core/c
 import { TROOP_COST, type Bag, type Res } from './core/data'
 import { idle, recruit, type State } from './core/game'
 import type { Mode } from './core/match'
+import { t } from './i18n'
 import { carriers, shouldFire, shouldResolve, type ClockRun } from './onlineView'
 import type { RivalView } from './server/matches'
 
@@ -50,7 +51,7 @@ export function useTurnClock(seconds: number, active: boolean, turn: number, blo
 
 // Linha do rival dentro da caixa do turno: nome, situação e relógio.
 export function RivalStatus({ name, mode, rival, turn, clock }: { name: string; mode: Mode; rival: RivalView | null; turn: number; clock: number | null }) {
-  const status = !rival ? 'carregando…' : !rival.online ? 'desconectado — partida pausada' : rival.turn >= turn ? 'pronto' : 'jogando'
+  const status = t(!rival ? 'carregando…' : !rival.online ? 'desconectado — partida pausada' : rival.turn >= turn ? 'pronto' : 'jogando')
   return (
     <div className="rival">
       <span className={!rival?.online ? 'neg' : rival.turn >= turn ? 'pos' : ''}>{mode === 'versus' ? '⚔️' : '🤝'} {name} · {status}</span>
@@ -61,7 +62,7 @@ export function RivalStatus({ name, mode, rival, turn, clock }: { name: string; 
 
 const KIND_LABEL: Record<Convoy['kind'], string> = { army: '⚔️ exército', aid: '🛡️ ajuda', cargo: '📦 carga' }
 const describe = (c: Convoy) =>
-  `${KIND_LABEL[c.kind]} (${c.n ?? Object.values(c.bag ?? {}).reduce((a, v) => a + (v ?? 0), 0)}) chega no turno ${c.arrive + 1}`
+  t('{0} ({1}) chega no turno {2}', t(KIND_LABEL[c.kind]), c.n ?? Object.values(c.bag ?? {}).reduce((a, v) => a + (v ?? 0), 0), c.arrive + 1)
 
 type MilitaryProps = {
   state: State
@@ -84,24 +85,24 @@ export function MilitaryCard({ state, mode, outbox, act, send, icon }: MilitaryP
   const stock = (Object.keys(state.res) as Res[]).filter(r => state.res[r] > 0)
   const load = Object.fromEntries(Object.entries(bag).filter(([r, v]) => v && stock.includes(r as Res))) as Bag
   const need = carriers(state, load)
-  const noCargo = !need ? 'Escolha o que levar.' : errOf(() => sendCargo(state, load))
+  const noCargo = !need ? t('Escolha o que levar.') : errOf(() => sendCargo(state, load))
   const away = state.away.reduce((a, x) => a + x.n, 0)
 
   return (
     <div className="pcard military">
-      <header className="red">{mode === 'versus' ? 'Exército' : 'Tropas e cargas'}</header>
-      <p className="troops"><b>Tropas: {state.troops}</b>{away > 0 && <span> · 👤 {away} carregando</span>}</p>
+      <header className="red">{t(mode === 'versus' ? 'Exército' : 'Tropas e cargas')}</header>
+      <p className="troops"><b>{t('Tropas: {0}', state.troops)}</b>{away > 0 && <span> · {t('👤 {0} carregando', away)}</span>}</p>
       <button className="opt green" disabled={!!noRecruit} title={noRecruit ?? ''} onClick={() => act(() => recruit(state))}>
-        <b>Recrutar</b>
+        <b>{t('Recrutar')}</b>
         <span>{noRecruit ?? <>{Object.entries(TROOP_COST).map(([r, v]) => <span key={r} className="chip">{icon(r as Res)}{v}</span>)} 1 ✋ · 1 👤</>}</span>
       </button>
       {state.troops > 0 && (
         <div className="sendrow">
-          <input className="field" type="number" min={1} max={state.troops} value={qty} aria-label="Tropas"
+          <input className="field" type="number" min={1} max={state.troops} value={qty} aria-label={t('Tropas')}
             onChange={e => setN(Math.floor(Number(e.target.value)) || 1)} />
           {mode === 'versus'
-            ? <button className="opt dark" onClick={() => send(() => sendArmy(state, qty))}><b>Atacar com {qty}</b><span>chega no turno {arrive}</span></button>
-            : <button className="opt dark" onClick={() => send(() => sendAid(state, qty))}><b>Enviar ajuda ({qty})</b><span>chega no turno {arrive}</span></button>}
+            ? <button className="opt dark" onClick={() => send(() => sendArmy(state, qty))}><b>{t('Atacar com {0}', qty)}</b><span>{t('chega no turno {0}', arrive)}</span></button>
+            : <button className="opt dark" onClick={() => send(() => sendAid(state, qty))}><b>{t('Enviar ajuda ({0})', qty)}</b><span>{t('chega no turno {0}', arrive)}</span></button>}
         </div>
       )}
       {mode === 'coop' && stock.length > 0 && (
@@ -116,12 +117,12 @@ export function MilitaryCard({ state, mode, outbox, act, send, icon }: MilitaryP
           </div>
           <button className="opt dark" disabled={!!noCargo} title={noCargo ?? ''}
             onClick={() => { if (send(() => sendCargo(state, load))) setBag({}) }}>
-            <b>Enviar carga</b>
-            <span>{noCargo ?? `${need} 👤 de ${idle(state)} ociosos · chega no turno ${arrive}`}</span>
+            <b>{t('Enviar carga')}</b>
+            <span>{noCargo ?? t('{0} 👤 de {1} ociosos · chega no turno {2}', need, idle(state), arrive)}</span>
           </button>
         </>
       )}
-      {outbox.length > 0 && <p className="muted">Saindo neste turno: {outbox.map(describe).join(' · ')}</p>}
+      {outbox.length > 0 && <p className="muted">{t('Saindo neste turno: {0}', outbox.map(describe).join(' · '))}</p>}
     </div>
   )
 }

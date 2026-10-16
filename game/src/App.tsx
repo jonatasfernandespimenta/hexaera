@@ -122,9 +122,9 @@ export function App() {
   const online = useOnline(matchId)
   // Online: o jogo lê e escreve o estado da sessão; senão, o jogo local de sempre.
   const state = matchId && online.state ? online.state : solo
-  const rivalName = online.seat === null ? 'rival' : online.meta?.names[1 - online.seat] ?? 'rival'
+  const rivalName = online.seat === null ? t('rival') : online.meta?.names[1 - online.seat] ?? t('rival')
   // Online só se mexe na própria vez: o turno enviado não muda mais (e nada cai na sessão antes de carregar).
-  const lock = !matchId ? null : online.sending ? 'Enviando o turno…' : online.phase !== 'playing' || !online.state ? `Esperando ${rivalName}…` : null
+  const lock = !matchId ? null : online.sending ? t('Enviando o turno…') : online.phase !== 'playing' || !online.state ? t('Esperando {0}…', rivalName) : null
   const setState = (v: State | ((s: State) => State)) => {
     if (!matchId) return setSolo(v)
     if (!lock) online.setState(typeof v === 'function' ? v(state) : v)
@@ -174,7 +174,7 @@ export function App() {
     try {
       const r = fn()
       setState(r.state); online.addConvoy(r.convoy)
-      setToast(`Comitiva a caminho: chega no turno ${r.convoy.arrive + 1}`); sfx('card')
+      setToast(t('Comitiva a caminho: chega no turno {0}', r.convoy.arrive + 1)); sfx('card')
       return true
     } catch (e) { setToast((e as Error).message); sfx('error'); return false }
   }
@@ -350,7 +350,7 @@ export function App() {
             {save && <button className="opt green" onClick={() => play(save)}><b>{t('Continuar')}</b><span>{t('Era {0} · turno {1}', ERAS[save.era].name, save.turn)}</span></button>}
             <button className={`opt ${save || fresh ? 'dark' : 'green'}`} onClick={() => play(newGame())}><b>{t('Nova civilização')}</b>{save && <span>{t('substitui o jogo salvo')}</span>}</button>
             <button className={`opt ${fresh ? 'green' : 'dark'}`} onClick={startTutorial}><b>{t('Tutorial')}</b><span>{t(fresh ? 'recomendado · 2 minutos' : 'rever as mecânicas')}</span></button>
-            <button className="opt dark" onClick={() => { sfx('card'); setScreen('online') }}><b>Jogar online</b><span>coop ou versus com um amigo</span></button>
+            <button className="opt dark" onClick={() => { sfx('card'); setScreen('online') }}><b>{t('Jogar online')}</b><span>{t('coop ou versus com um amigo')}</span></button>
             <button className="opt dark" onClick={() => { sfx('card'); setSetup(SANDBOX_DEFAULT) }}><b>Sandbox</b><span>{t('sem objetivo · você ajusta o mundo')}</span></button>
             <button className="opt dark" onClick={() => { setMuted(!mute); setMute(!mute); if (mute) sfx('click') }}><b>{t(mute ? '🔇 Som desligado' : '🔊 Som ligado')}</b></button>
             <LangToggle />
@@ -395,7 +395,7 @@ export function App() {
           </div>
         </div>
         <button className="endturn" onClick={() => finishTurn()} disabled={!!state.over || !!state.event || !canEnd}>
-          {matchId && online.phase === 'waiting' ? `Esperando ${rivalName}…` : t('Fim do turno')}
+          {matchId && online.phase === 'waiting' ? t('Esperando {0}…', rivalName) : t('Fim do turno')}
         </button>
       </div>
 
@@ -416,8 +416,8 @@ export function App() {
             {coop ? (
               // Coop: a era avança quando os dois votam no mesmo turno (aplicado ao fechar o turno).
               <button className="opt green" disabled={!ready || online.vote || !!lock} onClick={() => { online.setVote(true); sfx('card') }}>
-                <b>{online.vote ? 'Voto registrado ✔' : 'Votar para avançar'}</b>
-                <span>{rivalName} {partnerVoted ? 'votou' : 'ainda não votou'}</span>
+                <b>{t(online.vote ? 'Voto registrado ✔' : 'Votar para avançar')}</b>
+                <span>{t(partnerVoted ? '{0} votou' : '{0} ainda não votou', rivalName)}</span>
               </button>
             ) : !(last && match) && ( // versus: na última era vence quem derrubar o outro Centro
               <button className="opt green" disabled={!ready} onClick={() => act(() => advanceEra(state))}><b>{t(last ? 'Concluir civilização' : 'Avançar era')}</b></button>
@@ -494,7 +494,7 @@ export function App() {
           <button className={`round ${hand ? 'on' : ''}`} title={t('Construir')} onClick={() => setHand(!hand)}><Sprite name="hammer" size={34} /></button>
           <button className={`round ${wreck ? 'on' : ''}`} title={t('Demolir: volta metade do material')} onClick={() => { sfx(wreck ? 'uncard' : 'card'); setWreck(!wreck); setMode(null); setLink(null) }}><Sprite name="tools" size={34} /></button>
           {state.era > 0 && <button className={`round market ${panel === 'trade' ? 'on' : ''}`} title={t('Mercado e contratos')} onClick={() => toggle('trade')}><Sprite name="market" size={34} /></button>}
-          {match && <button className={`round ${look ? 'on' : ''}`} title={look ? 'Minha cidade' : 'Ver rival'} aria-label={look ? 'Minha cidade' : 'Ver rival'}
+          {match && <button className={`round ${look ? 'on' : ''}`} title={t(look ? 'Minha cidade' : 'Ver rival')} aria-label={t(look ? 'Minha cidade' : 'Ver rival')}
             onClick={() => { sfx('card'); setLook(!look) }}><Sprite name={look ? 'campfire' : 'banner'} size={34} /></button>}
           <button className={`round ${panel === 'log' ? 'on' : ''}`} title={t('Registro')} onClick={() => toggle('log')}><Sprite name="scroll" size={34} /></button>
           <button className={`round ${panel === 'menu' ? 'on' : ''}`} title="Menu" onClick={() => toggle('menu')}><Sprite name="gear" size={34} /></button>
@@ -574,10 +574,10 @@ export function App() {
       {state.over && match && (
         <div className="over">
           <div className="pcard big">
-            <header className={state.over === 'won' ? 'gold' : 'red'}>{state.over === 'won' ? 'Vitória' : 'Derrota'}</header>
+            <header className={state.over === 'won' ? 'gold' : 'red'}>{t(state.over === 'won' ? 'Vitória' : 'Derrota')}</header>
             <h2>{endText(match.mode, state.over, rivalName)}</h2>
-            <p>Partida online · {state.turn} turnos · Era {ERAS[state.era].name}.</p>
-            <button className="opt green" onClick={() => { setPanel(null); leave(); setScreen('menu') }}><b>Menu principal</b></button>
+            <p>{t('Partida online · {0} turnos · Era {1}.', state.turn, ERAS[state.era].name)}</p>
+            <button className="opt green" onClick={() => { setPanel(null); leave(); setScreen('menu') }}><b>{t('Menu principal')}</b></button>
           </div>
         </div>
       )}

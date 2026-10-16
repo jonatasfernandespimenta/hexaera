@@ -389,7 +389,7 @@ export function explore(prev: State, h: Hex): State {
   guard(prev)
   if (prev.tiles[key(h)]) throw new Error(tr('Já revelado.'))
   if (!neighbors(h).some(n => prev.tiles[key(n)])) throw new Error(tr('Precisa ser vizinho do seu território.'))
-  if (neutral(prev, h)) throw new Error('Fronteira neutra.')
+  if (neutral(prev, h)) throw new Error(tr('Fronteira neutra.'))
   const cost = exploreCost(prev, h)
   if (cost > prev.actions) throw new Error(tr('Faltam ações: custa {0} ✋.', cost))
   const s = structuredClone(prev)
@@ -518,10 +518,10 @@ export function demolish(prev: State, h: Hex): State {
 // Recruta 1 tropa: exige partida online e Campo de guerra pronto com trabalhador; sempre sobra ≥ 1 👤.
 export function recruit(prev: State): State {
   guard(prev)
-  if (!prev.match) throw new Error('Só há tropas em partida online.')
-  if (!staffed(prev).some(k => prev.tiles[k].building!.id === 'warcamp')) throw new Error('Precisa de um Campo de guerra funcionando.')
-  if (prev.pop < 2) throw new Error('Precisa deixar ao menos 1 👤.')
-  if (prev.actions < 1) throw new Error('Faltam ações: custa 1 ✋.')
+  if (!prev.match) throw new Error(tr('Só há tropas em partida online.'))
+  if (!staffed(prev).some(k => prev.tiles[k].building!.id === 'warcamp')) throw new Error(tr('Precisa de um Campo de guerra funcionando.'))
+  if (prev.pop < 2) throw new Error(tr('Precisa deixar ao menos 1 👤.'))
+  if (prev.actions < 1) throw new Error(tr('Faltam ações: custa {0} ✋.', 1))
   const s = structuredClone(prev)
   s.actions -= 1
   s.pop -= 1
@@ -674,7 +674,7 @@ function threats(s: State) {
     if (distance(here) === 1) {
       if (s.troops > 0) {
         s.troops -= 1
-        log(s, '🛡 Uma tropa caiu defendendo o Centro.')
+        log(s, tr('🛡 Uma tropa caiu defendendo o Centro.'))
         continue
       }
       s.centerHp -= inv.atk
@@ -917,7 +917,7 @@ export function advanceEra(prev: State, force = false): State {
   if (!force && !eraGoals(prev).every(g => g.have >= g.need)) throw new Error(tr('Requisitos da era incompletos.'))
   const s = structuredClone(prev)
   if (s.era === ERAS.length - 1) {
-    if (s.match?.mode === 'versus') throw new Error('No versus, vence quem derrubar o outro Centro.')
+    if (s.match?.mode === 'versus') throw new Error(tr('No versus, vence quem derrubar o outro Centro.'))
     if (s.flags.includes('sandbox')) throw new Error(tr('Civilização já concluída.'))
     return { ...s, over: 'won' }
   }

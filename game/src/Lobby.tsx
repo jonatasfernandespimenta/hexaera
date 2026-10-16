@@ -3,9 +3,10 @@ import { useRef, useState } from 'react'
 import type { Mode } from './core/match'
 import { create, join, setCreds } from './net'
 import { sfx } from './sfx'
+import { t } from './i18n'
 import type { OnlinePhase } from './useOnline'
 
-const msg = (e: unknown) => (e instanceof Error ? e.message : 'Erro de conexão.')
+const msg = (e: unknown) => (e instanceof Error ? e.message : t('Erro de conexão.'))
 const matchUrl = (id: string) => `${location.origin}/?match=${id}`
 
 type Props = {
@@ -46,11 +47,11 @@ export function Lobby({ matchId, joinId, phase, error, onEnter, onBack }: Props)
     try { await navigator.clipboard.writeText(url); setCopied(true); sfx('click') } catch { linkRef.current?.select() } // sem clipboard: deixa o texto selecionado
   }
 
-  const back = <button className="opt dark" onClick={() => { sfx('uncard'); onBack() }}><b>Voltar</b></button>
+  const back = <button className="opt dark" onClick={() => { sfx('uncard'); onBack() }}><b>{t('Voltar')}</b></button>
   const nameRow = (
     <div className="setrow">
-      <small>Apelido</small>
-      <input className="field" value={name} maxLength={20} placeholder="seu nome" onChange={e => setName(e.target.value)} />
+      <small>{t('Apelido')}</small>
+      <input className="field" value={name} maxLength={20} placeholder={t('seu nome')} onChange={e => setName(e.target.value)} />
     </div>
   )
   const alert = (err || error) && <p className="lobbyerr">{err ?? error}</p>
@@ -58,17 +59,17 @@ export function Lobby({ matchId, joinId, phase, error, onEnter, onBack }: Props)
   // Partida já nossa: carregando, esperando o segundo jogador ou com erro.
   if (matchId) return (
     <div className="pcard menu setup">
-      <header className="gold">Jogar online</header>
+      <header className="gold">{t('Jogar online')}</header>
       {phase === 'lobby' ? <>
         <div className="setrow">
-          <small>Mande este link para o outro jogador</small>
+          <small>{t('Mande este link para o outro jogador')}</small>
           <div>
             <input ref={linkRef} className="field" readOnly value={matchUrl(matchId)} onFocus={e => e.target.select()} />
-            <button onClick={() => copy(matchUrl(matchId))}>{copied ? 'Copiado!' : 'Copiar'}</button>
+            <button onClick={() => copy(matchUrl(matchId))}>{t(copied ? 'Copiado!' : 'Copiar')}</button>
           </div>
         </div>
-        <p className="lobbywait">Esperando o segundo jogador…</p>
-      </> : phase !== 'error' && <p className="lobbywait">Conectando…</p>}
+        <p className="lobbywait">{t('Esperando o segundo jogador…')}</p>
+      </> : phase !== 'error' && <p className="lobbywait">{t('Conectando…')}</p>}
       {alert}
       {back}
     </div>
@@ -76,10 +77,10 @@ export function Lobby({ matchId, joinId, phase, error, onEnter, onBack }: Props)
 
   if (joinId) return (
     <div className="pcard menu setup">
-      <header className="gold">Entrar na partida</header>
+      <header className="gold">{t('Entrar na partida')}</header>
       {nameRow}
       {alert}
-      <button className="opt green" disabled={busy || !name.trim()} onClick={() => doJoin(joinId)}><b>{busy ? 'Entrando…' : 'Entrar'}</b></button>
+      <button className="opt green" disabled={busy || !name.trim()} onClick={() => doJoin(joinId)}><b>{t(busy ? 'Entrando…' : 'Entrar')}</b></button>
       {back}
     </div>
   )
@@ -89,25 +90,25 @@ export function Lobby({ matchId, joinId, phase, error, onEnter, onBack }: Props)
   )
   return (
     <div className="pcard menu setup">
-      <header className="gold">Jogar online</header>
+      <header className="gold">{t('Jogar online')}</header>
       <div className="setrow">
-        <small>Modo</small>
+        <small>{t('Modo')}</small>
         <div>
           {pick<Mode>(mode, 'coop', m => { setMode(m); setFast(false) }, 'Coop')}
           {pick<Mode>(mode, 'versus', m => { setMode(m); setFast(true) }, 'Versus')}
         </div>
       </div>
       <div className="setrow">
-        <small>Ritmo rápido</small>
-        <div>{pick(fast, true, setFast, 'Ligado')}{pick(fast, false, setFast, 'Desligado')}</div>
+        <small>{t('Ritmo rápido')}</small>
+        <div>{pick(fast, true, setFast, t('Ligado'))}{pick(fast, false, setFast, t('Desligado'))}</div>
       </div>
       <div className="setrow">
-        <small>Relógio por turno</small>
-        <div>{pick(timer, 0, setTimer, 'Desligado')}{pick(timer, 60, setTimer, '60 s')}{pick(timer, 90, setTimer, '90 s')}</div>
+        <small>{t('Relógio por turno')}</small>
+        <div>{pick(timer, 0, setTimer, t('Desligado'))}{pick(timer, 60, setTimer, '60 s')}{pick(timer, 90, setTimer, '90 s')}</div>
       </div>
       {nameRow}
       {alert}
-      <button className="opt green" disabled={busy || !name.trim()} onClick={doCreate}><b>{busy ? 'Criando…' : 'Criar partida'}</b><span>gera um link para o amigo</span></button>
+      <button className="opt green" disabled={busy || !name.trim()} onClick={doCreate}><b>{t(busy ? 'Criando…' : 'Criar partida')}</b><span>{t('gera um link para o amigo')}</span></button>
       {back}
     </div>
   )

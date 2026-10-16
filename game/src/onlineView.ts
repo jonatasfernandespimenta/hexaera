@@ -5,6 +5,7 @@ import { canChoose, type State } from './core/game'
 import { EVENT_BY_ID } from './core/events'
 import { distance, toWorld, type Hex } from './core/hex'
 import { neutral, type Mode } from './core/match'
+import { t } from './i18n'
 
 // Fração do caminho já percorrida no turno; null = já chegou (some do mapa).
 export function convoyFraction(c: Convoy, turn: number): number | null {
@@ -51,8 +52,8 @@ export const carriers = (s: State, bag: Bag) =>
   Math.ceil(Object.values(bag).reduce((a, v) => a + (v ?? 0), 0) / CARGO_PER_WORKER[s.era])
 
 export function endText(mode: Mode, over: 'won' | 'lost', rival: string) {
-  if (mode === 'versus') return over === 'won' ? `Vitória — o Centro de ${rival} caiu` : 'Derrota — seu Centro caiu'
-  return over === 'won' ? 'Civilização concluída juntos' : 'Um Centro caiu — a dupla perdeu'
+  if (mode === 'versus') return over === 'won' ? t('Vitória — o Centro de {0} caiu', rival) : t('Derrota — seu Centro caiu')
+  return t(over === 'won' ? 'Civilização concluída juntos' : 'Um Centro caiu — a dupla perdeu')
 }
 
 // Relógio do turno: envia ao zerar se ainda não enviou, sem envio em andamento, sem evento aberto

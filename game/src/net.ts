@@ -2,6 +2,7 @@
 import type { Convoy } from './core/convoy'
 import type { State } from './core/game'
 import type { Mode } from './core/match'
+import { t } from './i18n'
 import type { Meta, RivalView, SeatRec } from './server/matches'
 
 export type Creds = { seat: 0 | 1; token: string }
@@ -22,7 +23,8 @@ async function call<T>(method: string, url: string, body?: unknown, token?: stri
   if (token) headers['x-token'] = token
   const res = await fetch(url, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), cache: 'no-store' })
   const data = await res.json().catch(() => null)
-  if (!res.ok) throw new Error(data?.error ?? `Erro ${res.status}.`)
+  // Erros do servidor vêm em português (texto estável); a tradução é feita aqui, no cliente.
+  if (!res.ok) throw new Error(data?.error ? t(data.error) : t('Erro {0}.', res.status))
   return data as T
 }
 
