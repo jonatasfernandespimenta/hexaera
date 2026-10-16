@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest'
 import { ERAS, TROOP_COST } from './data'
 import { EVENT_BY_ID } from './events'
-import { advanceEra, canChoose, eraGoals, endTurn, hiddenHexes, newGame, recruit, resolveEvent } from './game'
+import { advanceEra, canChoose, eraGoals, endTurn, build, hiddenHexes, newGame, recruit, resolveEvent } from './game'
 import { neutral, newMatchGame, normalize, settle } from './match'
 
 test('fronteira neutra: assento 0 não explora rumo ao rival', () => {
@@ -35,6 +35,17 @@ test('versus: sem invasões aleatórias nem cartas de ataque/destruição', () =
 })
 test('ritmo rápido reduz metas', () => {
   expect(eraGoals(newMatchGame(5, 'versus', 0, true))[0].need).toBeLessThan(ERAS[0].goal.knowledge)
+})
+test('ritmo rápido: obras levam metade dos turnos (arredondado para cima)', () => {
+  const turns = (fast: boolean) => {
+    const s = newMatchGame(5, 'coop', 0, fast)
+    const h = { q: 1, r: 0 }
+    s.res.wood = 50
+    s.tiles['1,0'] = { terrain: 'plains' }
+    return build(s, h, 'elder').tiles['1,0'].building!.turnsLeft // Ancião: 3 turnos
+  }
+  expect(turns(false)).toBe(3)
+  expect(turns(true)).toBe(2)
 })
 test('coop normal: meta ×2', () => {
   expect(eraGoals(newMatchGame(5, 'coop', 0, false))[0].need).toBe(ERAS[0].goal.knowledge * 2)

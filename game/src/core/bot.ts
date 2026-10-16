@@ -108,7 +108,7 @@ export function step(s: State): State | null {
     return resolveEvent(s, Math.max(0, i))
   }
   const goals = eraGoals(s)
-  if (goals.every(g => g.have >= g.need)) return advanceEra(s)
+  if (goals.every(g => g.have >= g.need)) return s.match && s.era === ERAS.length - 1 ? null : advanceEra(s) // versus: sem vitória por era
 
   // Defesa: ataca invasor que dá para matar logo.
   const inv = s.invaders.find(i => i.hp <= huntDamage(s) * 2 || distance(parse(i.at)) <= 1)
@@ -211,12 +211,12 @@ export type Report = {
   debtTurns: number
 }
 
-export function playGame(seed: number, maxTurns = 500): Report {
-  let s = newGame(seed)
+export function playGame(seed: number, maxTurns = 500, start?: State): Report {
+  let s = start ?? newGame(seed)
   const eraTurn = [1]
   const waiting: Record<string, number>[] = ERAS.map(() => ({}))
   let debtTurns = 0
-  while (!s.over && s.turn <= maxTurns) {
+  while (!s.over && s.turn <= maxTurns && !(s.match && s.era === ERAS.length - 1)) { // partida online: mede só até a última era
     for (let n = 0; n < 40; n++) {
       const next = step(s)
       if (!next) break

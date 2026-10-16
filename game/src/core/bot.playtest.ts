@@ -1,14 +1,15 @@
 import { test } from 'vitest'
 import { ERAS } from './data'
+import { newMatchGame } from './match'
 import { playGame, type Report } from './bot'
 
 const N = Number((globalThis as any).process?.env.N ?? 60)
 const median = (xs: number[]) => (xs.length ? [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)] : NaN)
 const pct = (n: number) => `${Math.round((100 * n) / N)}%`
 
-test(`playtest: ${N} partidas`, () => {
+const run = (title: string, play: (i: number) => Report) => test(`${title}: ${N} partidas`, () => {
   const t0 = Date.now()
-  const games: Report[] = Array.from({ length: N }, (_, i) => playGame(1000 + i))
+  const games: Report[] = Array.from({ length: N }, (_, i) => play(i))
   const out: string[] = []
   const won = games.filter(g => g.outcome === 'won'), lost = games.filter(g => g.outcome === 'lost')
   out.push(`Partidas: ${N} · vitória ${pct(won.length)} · derrota ${pct(lost.length)} · tempo esgotado ${pct(N - won.length - lost.length)} · ${((Date.now() - t0) / 1000).toFixed(1)}s`)
@@ -28,3 +29,6 @@ test(`playtest: ${N} partidas`, () => {
   })
   console.log('\n' + out.join('\n') + '\n')
 })
+
+run('playtest', i => playGame(1000 + i))
+run('playtest ritmo rápido (versus)', i => playGame(1000 + i, 500, newMatchGame(1000 + i, 'versus', 0, true)))

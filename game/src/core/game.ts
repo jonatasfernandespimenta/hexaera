@@ -446,7 +446,7 @@ export function build(prev: State, h: Hex, id: BuildingId): State {
     t.terrain = 'plains'
     s.res.wood += CLEAR_FOREST_WOOD
   }
-  t.building = { id, turnsLeft: def.turns, hp: def.hp, ...(up && { up }) }
+  t.building = { id, turnsLeft: s.match?.fast ? Math.ceil(def.turns / 2) : def.turns, hp: def.hp, ...(up && { up }) }
   return s
 }
 
