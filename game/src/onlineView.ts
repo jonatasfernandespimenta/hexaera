@@ -53,3 +53,9 @@ export function endText(mode: Mode, over: 'won' | 'lost', rival: string) {
   if (mode === 'versus') return over === 'won' ? `Vitória — o Centro de ${rival} caiu` : 'Derrota — seu Centro caiu'
   return over === 'won' ? 'Civilização concluída juntos' : 'Um Centro caiu — a dupla perdeu'
 }
+
+// Relógio do turno: envia ao zerar se ainda não enviou, sem envio em andamento, sem evento aberto
+// (bloqueia o envio) e fora da pausa após uma falha.
+export type ClockRun = { fired: boolean; pending: boolean; retryAt: number }
+export const shouldFire = (left: number, r: ClockRun, blocked: boolean, now: number) =>
+  left === 0 && !r.fired && !r.pending && !blocked && now >= r.retryAt

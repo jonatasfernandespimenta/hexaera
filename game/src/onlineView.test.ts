@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Convoy } from './core/convoy'
 import { distance, toWorld } from './core/hex'
 import { neutral, newMatchGame, RIVAL_DISTANCE } from './core/match'
-import { carriers, convoyFraction, convoyMarkers, endText, neutralStrip } from './onlineView'
+import { carriers, convoyFraction, convoyMarkers, endText, neutralStrip, shouldFire } from './onlineView'
 
 const cv = (o: Partial<Convoy>): Convoy => ({ id: 'x', kind: 'army', sent: 2, arrive: 6, n: 3, ...o })
 
@@ -70,5 +70,23 @@ describe('endText', () => {
     expect(endText('versus', 'lost', 'Ana')).toBe('Derrota — seu Centro caiu')
     expect(endText('coop', 'won', 'Ana')).toBe('Civilização concluída juntos')
     expect(endText('coop', 'lost', 'Ana')).toBe('Um Centro caiu — a dupla perdeu')
+  })
+})
+
+describe('shouldFire', () => {
+  const run = { fired: false, pending: false, retryAt: 0 }
+  it('envia ao zerar, uma vez', () => {
+    expect(shouldFire(0, run, false, 1000)).toBe(true)
+    expect(shouldFire(1, run, false, 1000)).toBe(false)
+    expect(shouldFire(0, { ...run, fired: true }, false, 1000)).toBe(false)
+    expect(shouldFire(0, { ...run, pending: true }, false, 1000)).toBe(false)
+  })
+  it('espera o evento ser resolvido e então envia', () => {
+    expect(shouldFire(0, run, true, 1000)).toBe(false)
+    expect(shouldFire(0, run, false, 1001)).toBe(true)
+  })
+  it('depois de uma falha só tenta de novo após a pausa', () => {
+    expect(shouldFire(0, { ...run, retryAt: 4000 }, false, 3999)).toBe(false)
+    expect(shouldFire(0, { ...run, retryAt: 4000 }, false, 4000)).toBe(true)
   })
 })

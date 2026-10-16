@@ -4,27 +4,37 @@ import { sendAid, sendArmy, sendCargo, travelTurns, type Convoy } from './core/c
 import { TROOP_COST, type Bag, type Res } from './core/data'
 import { idle, recruit, type State } from './core/game'
 import type { Mode } from './core/match'
-import { carriers } from './onlineView'
+import { carriers, shouldFire, type ClockRun } from './onlineView'
 import type { RivalView } from './server/matches'
 
 type Sent = { state: State; convoy: Convoy }
 const errOf = (fn: () => unknown) => { try { fn(); return null } catch (e) { return (e as Error).message } }
 
-// Relógio do turno: conta `seconds` a partir de quando o turno fica jogável; ao zerar chama onZero uma vez.
+// Relógio do turno: conta `seconds` a partir de quando o turno fica jogável; ao zerar chama onZero
+// até um envio dar certo (no máximo um por turno). Com evento aberto (blocked) espera; após falha, tenta de novo em RETRY_MS.
 // Recomeça a cada turno. Sem relógio (0) devolve null.
-export function useTurnClock(seconds: number, active: boolean, turn: number, onZero: () => void) {
+const RETRY_MS = 3000
+export function useTurnClock(seconds: number, active: boolean, turn: number, blocked: boolean, onZero: () => Promise<boolean>) {
   const [left, setLeft] = useState<{ turn: number; l: number } | null>(null)
   const zero = useRef(onZero)
   zero.current = onZero
-  const run = useRef<{ turn: number; start: number; fired: boolean } | null>(null)
+  const block = useRef(blocked)
+  block.current = blocked
+  const run = useRef<ClockRun & { turn: number; start: number } | null>(null)
   useEffect(() => {
     if (!seconds || !active) return
-    if (run.current?.turn !== turn) run.current = { turn, start: Date.now(), fired: false }
+    if (run.current?.turn !== turn) run.current = { turn, start: Date.now(), fired: false, pending: false, retryAt: 0 }
     const r = run.current
     const tick = () => {
       const l = Math.max(0, Math.ceil(seconds - (Date.now() - r.start) / 1000))
-      setLeft({ turn, l })
-      if (l === 0 && !r.fired) { r.fired = true; zero.current() }
+      setLeft(p => (p?.turn === turn && p.l === l ? p : { turn, l })) // sem mudança: sem render
+      if (!shouldFire(l, r, block.current, Date.now())) return
+      r.pending = true
+      zero.current().catch(() => false).then(ok => {
+        r.pending = false
+        if (ok) r.fired = true
+        else r.retryAt = Date.now() + RETRY_MS
+      })
     }
     tick()
     const t = setInterval(tick, 250)

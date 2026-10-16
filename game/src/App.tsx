@@ -146,6 +146,7 @@ export function App() {
   const [wreck, setWreck] = useState(false) // modo demolir
   const [railFrom, setRailFrom] = useState<Hex | null>(null) // origem da rota de ferrovia
   const [railTo, setRailTo] = useState<Hex | null>(null) // celular: destino escolhido, aguardando confirmação
+  const [look, setLook] = useState(false) // online: câmera na cidade do rival
   const pickBuilding = (id: BuildingId | null) => { setMode(id); setLink(null); setDeck(false); setWreck(false); setRailFrom(null); setRailTo(null) }
   const pickLink = (l: Link | null) => { setLink(l); setMode(null); setDeck(false); setWreck(false) }
   const toggle = (p: Panel) => setPanel(panel === p ? null : p)
@@ -200,7 +201,7 @@ export function App() {
   useEffect(() => { if (screen === 'game' && tut === null && !matchId && !TEST) store.set(SAVE, JSON.stringify(state)) }, [state, screen, tut, matchId])
 
   // Sai da partida online (as credenciais ficam: o link retoma depois).
-  const leave = () => { setMatchId(null); setJoinId(null); clearUrl() }
+  const leave = () => { setMatchId(null); setJoinId(null); setLook(false); clearUrl() }
   const play = (s: State) => { if (matchId) leave(); setSolo(s); setTut(null); setPanel(null); setMode(null); setLink(null); setScreen('game') }
   // Sala online: quando o segundo jogador chega (ou a partida já corria), vai para o jogo.
   useEffect(() => {
@@ -209,12 +210,15 @@ export function App() {
   }, [screen, matchId, online.phase])
   // Fim do turno: online envia ao servidor (travado enquanto envia ou espera o rival).
   const canEnd = !lock
-  const finishTurn = () => {
-    if (!matchId) return act(() => endTurn(state), 'turn')
-    if (canEnd) online.endTurn().then(ok => sfx(ok ? 'turn' : 'error'))
+  // Online resolve true se o turno foi enviado.
+  const finishTurn = (): Promise<boolean> => {
+    if (!matchId) { act(() => endTurn(state), 'turn'); return Promise.resolve(true) }
+    if (!canEnd) return Promise.resolve(false)
+    return online.endTurn().then(ok => { sfx(ok ? 'turn' : 'error'); return ok })
   }
-  // Relógio da partida: ao zerar, envia o turno como o botão.
-  const clock = useTurnClock(matchId ? online.meta?.timer ?? 0 : 0, !!matchId && online.phase === 'playing' && !state.over, state.turn, finishTurn)
+  // Relógio da partida: ao zerar, envia o turno como o botão (espera o evento aberto ser resolvido).
+  const clock = useTurnClock(matchId ? online.meta?.timer ?? 0 : 0, !!matchId && online.phase === 'playing' && !state.over, state.turn,
+    !!state.event, finishTurn)
   // Erros da sessão online aparecem no aviso de sempre.
   useEffect(() => { if (online.error && screen === 'game') setToast(online.error) }, [online.error, screen])
   const goStep = (i: number, s = state) => {
@@ -305,12 +309,13 @@ export function App() {
   // Online: cidade do rival (fantasma) na posição do Centro dele, faixa neutra e comitivas na estrada.
   const strip = useMemo(() => (match ? neutralStrip(state) : []), [match?.rival.q, match?.rival.r])
   const rivalAt = match && toWorld(match.rival)
+  const focus: [number, number] = look && rivalAt ? rivalAt : [0, 0] // fora da partida a câmera volta ao próprio Centro
   const markers = match ? convoyMarkers(match.rival, online.mySent, online.rival?.sent ?? [], state.turn) : []
   const canvas = (
       <Canvas shadows dpr={[1, 2]} camera={{ position: [0, 10.5, 7.2], fov: 38 }}>
         <color attach="background" args={['#1a0f08']} />
         <fog attach="fog" args={['#1a0f08', 18, 38]} />
-        <Board state={state} buildMode={mode} linkMode={link} demolishMode={wreck} railFrom={railFrom} railTo={railTo} onHex={onHex} fp={fp} onExitFp={() => setFp(false)}
+        <Board state={state} buildMode={mode} linkMode={link} demolishMode={wreck} railFrom={railFrom} railTo={railTo} onHex={onHex} fp={fp} onExitFp={() => setFp(false)} focus={focus}
           onEdge={(a, b) => link && act(() => buildLink(state, a, b, link), 'link')} />
         {match && <NeutralStrip hexes={strip} />}
         {rivalAt && online.rival?.state && <group position={[rivalAt[0], 0, rivalAt[1]]}><Board ghost state={online.rival.state} /></group>}
@@ -388,7 +393,7 @@ export function App() {
             {match && <RivalStatus name={rivalName} mode={match.mode} rival={online.rival} turn={state.turn} clock={clock} />}
           </div>
         </div>
-        <button className="endturn" onClick={finishTurn} disabled={!!state.over || !!state.event || !canEnd}>
+        <button className="endturn" onClick={() => finishTurn()} disabled={!!state.over || !!state.event || !canEnd}>
           {matchId && online.phase === 'waiting' ? `Esperando ${rivalName}…` : t('Fim do turno')}
         </button>
       </div>
@@ -488,6 +493,8 @@ export function App() {
           <button className={`round ${hand ? 'on' : ''}`} title={t('Construir')} onClick={() => setHand(!hand)}><Sprite name="hammer" size={34} /></button>
           <button className={`round ${wreck ? 'on' : ''}`} title={t('Demolir: volta metade do material')} onClick={() => { sfx(wreck ? 'uncard' : 'card'); setWreck(!wreck); setMode(null); setLink(null) }}><Sprite name="tools" size={34} /></button>
           {state.era > 0 && <button className={`round market ${panel === 'trade' ? 'on' : ''}`} title={t('Mercado e contratos')} onClick={() => toggle('trade')}><Sprite name="market" size={34} /></button>}
+          {match && <button className={`round ${look ? 'on' : ''}`} title={look ? 'Minha cidade' : 'Ver rival'} aria-label={look ? 'Minha cidade' : 'Ver rival'}
+            onClick={() => { sfx('card'); setLook(!look) }}><Sprite name={look ? 'campfire' : 'banner'} size={34} /></button>}
           <button className={`round ${panel === 'log' ? 'on' : ''}`} title={t('Registro')} onClick={() => toggle('log')}><Sprite name="scroll" size={34} /></button>
           <button className={`round ${panel === 'menu' ? 'on' : ''}`} title="Menu" onClick={() => toggle('menu')}><Sprite name="gear" size={34} /></button>
         </div>

@@ -1177,6 +1177,7 @@ type Props = {
   demolishMode?: boolean
   railFrom?: Hex | null
   railTo?: Hex | null
+  focus?: [number, number] // ponto do mundo (x, z) que a câmera acompanha: (0,0) = próprio Centro; online, o Centro do rival
   ghost?: boolean // cidade do rival: só os tiles, sem câmera, luzes, mesa, hexes ocultos nem interação
 }
 
@@ -1283,6 +1284,28 @@ export function ConvoyMarker({ x, z, kind, n, mine }: { x: number; z: number; ki
   )
 }
 
+// Leva a câmera até `to` sem perder o ângulo: alvo e câmera andam juntos (a névoa, medida da câmera, vai junto).
+// Só anda quando `to` muda; depois o jogador volta a girar e arrastar à vontade.
+function Focus({ to, orbit }: { to: [number, number]; orbit: React.RefObject<any> }) {
+  const goal = useRef<Vector3 | null>(null)
+  const first = useRef(true)
+  useEffect(() => {
+    if (first.current) { first.current = false; return } // montagem: a câmera já está no lugar
+    goal.current = new Vector3(to[0], 0, to[1] + 0.6)
+  }, [to[0], to[1]])
+  useFrame((_, dt) => {
+    const c = orbit.current, g = goal.current
+    if (!c || !g) return
+    const step = g.clone().sub(c.target)
+    if (step.length() < 0.01) goal.current = null
+    else step.multiplyScalar(Math.min(1, dt * 4))
+    c.target.add(step)
+    c.object.position.add(step)
+    c.update()
+  })
+  return null
+}
+
 // Em tela retrato (celular em pé) a câmera recua para o tabuleiro caber na largura.
 function FitCamera() {
   const { camera, size } = useThree()
@@ -1291,7 +1314,8 @@ function FitCamera() {
   return null
 }
 
-export function Board({ state, buildMode = null, linkMode = null, onHex, onEdge, fp, onExitFp, demolishMode, ghost, railFrom, railTo }: Props) {
+export function Board({ state, buildMode = null, linkMode = null, onHex, onEdge, fp, onExitFp, demolishMode, ghost, focus = [0, 0], railFrom, railTo }: Props) {
+  const orbit = useRef<any>(null)
   const [hover, setHover] = useState<string | null>(null)
   const [hoverEdge, setHoverEdge] = useState<string | null>(null)
   const seen = useRef(new Set(Object.keys(state.tiles)))
@@ -1327,7 +1351,8 @@ export function Board({ state, buildMode = null, linkMode = null, onHex, onEdge,
     <>
       {!ghost && <>
       <FitCamera />
-      {fp ? <FirstPerson state={state} onExit={onExitFp!} /> : <OrbitControls target={[0, 0, 0.6]} maxPolarAngle={1.1} minDistance={5} maxDistance={26} enablePan />}
+      {fp ? <FirstPerson state={state} onExit={onExitFp!} /> : <OrbitControls ref={orbit} target={[0, 0, 0.6]} maxPolarAngle={1.1} minDistance={5} maxDistance={26} enablePan />}
+      <Focus to={focus} orbit={orbit} />
       <ambientLight intensity={0.45} color="#ffe2c0" />
       <hemisphereLight args={['#ffe6c0', '#3a2414', 0.7]} />
       <directionalLight
