@@ -107,4 +107,10 @@ describe('ads', () => {
     a.gameplay(true)
     expect(sdk.game.gameplayStart).toHaveBeenCalledTimes(1)
   })
+  it('CrazyGames sem SDK: sem link de convite (a origem do host de arquivos não serve)', async () => {
+    const a = await load(ON)
+    sdk.init.mockImplementationOnce(async () => { throw new Error('x') })
+    await a.initAds()
+    expect(await a.inviteUrl('abc')).toBe('')
+  })
 })

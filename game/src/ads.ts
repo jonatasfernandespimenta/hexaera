@@ -122,7 +122,7 @@ export function banner(id: string): () => void {
 
 export async function inviteUrl(id: string): Promise<string> {
   if (sdk) { try { return await sdk.game.inviteLink({ match: id }) } catch {} }
-  return `${location.origin}/?match=${id}`
+  return CRAZY ? '' : `${location.origin}/?match=${id}` // CrazyGames sem SDK: a origem é o host de arquivos (link morto)
 }
 
 export function inviteParam(): string | null {

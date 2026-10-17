@@ -17,8 +17,17 @@ export function setCreds(id: string, c: Creds) {
   try { localStorage.setItem(KEY(id), JSON.stringify(c)) } catch { /* sem storage: só não lembra a partida */ }
 }
 
-// Base da API: vazia na Vercel (mesma origem); URL absoluta no build do CrazyGames.
-export const API = process.env.NEXT_PUBLIC_API_BASE ?? ''
+// Última partida criada/aceita: no CrazyGames a URL não guarda ?match=, então o recarregar volta por aqui.
+const LAST = 'hexaera.lastMatch'
+export function lastMatch(): string | null {
+  try { return localStorage.getItem(LAST) } catch { return null }
+}
+export function setLastMatch(id: string | null) {
+  try { if (id) localStorage.setItem(LAST, id); else localStorage.removeItem(LAST) } catch { /* sem storage */ }
+}
+
+// Base da API: vazia na Vercel (mesma origem); URL absoluta no build do CrazyGames (sem / no fim).
+export const API = (process.env.NEXT_PUBLIC_API_BASE ?? '').replace(/\/+$/, '')
 
 async function call<T>(method: string, url: string, body?: unknown, token?: string): Promise<T> {
   const headers: Record<string, string> = {}

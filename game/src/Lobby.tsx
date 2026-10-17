@@ -27,7 +27,7 @@ export function Lobby({ matchId, joinId, phase, error, onEnter, onBack }: Props)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
-  const [link, setLink] = useState('')
+  const [link, setLink] = useState<string | null>(null) // null = carregando; '' = sem convite
   const linkRef = useRef<HTMLInputElement>(null)
 
   // O convite pode vir do SDK (assíncrono)
@@ -73,13 +73,15 @@ export function Lobby({ matchId, joinId, phase, error, onEnter, onBack }: Props)
     <div className="pcard menu setup">
       <header className="gold">{t('Jogar online')}</header>
       {phase === 'lobby' ? <>
-        <div className="setrow">
-          <small>{t('Mande este link para o outro jogador')}</small>
-          <div>
-            <input ref={linkRef} className="field" readOnly value={link} onFocus={e => e.target.select()} />
-            <button disabled={!link} onClick={() => copy(link)}>{t(copied ? 'Copiado!' : 'Copiar')}</button>
+        {link === '' ? <p className="muted">{t('Convite indisponível agora. Recarregue o jogo.')}</p> : (
+          <div className="setrow">
+            <small>{t('Mande este link para o outro jogador')}</small>
+            <div>
+              <input ref={linkRef} className="field" readOnly value={link ?? ''} onFocus={e => e.target.select()} />
+              <button disabled={!link} onClick={() => link && copy(link)}>{t(copied ? 'Copiado!' : 'Copiar')}</button>
+            </div>
           </div>
-        </div>
+        )}
         <p className="lobbywait">{t('Esperando o segundo jogador…')}</p>
       </> : phase !== 'error' && <p className="lobbywait">{t('Conectando…')}</p>}
       {alert}
