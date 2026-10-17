@@ -7,6 +7,9 @@ import {
   explore, happiness, pollutionDelta, run, terrainAt, housing, hunt, idle, income, maxActions, maxContracts, newGame, resolveEvent, shortfall, type State,
 } from './core/game'
 import { normalize } from './core/match'
+import { aidOffer, takeAid, type Aid } from './core/aid'
+import { AidCard } from './Aid'
+import { EraUp } from './EraUp'
 import { distance, key, toWorld, type Hex } from './core/hex'
 import { Board, ConvoyMarker, NeutralStrip } from './scene/Board'
 import { MilitaryCard, RivalStatus, useTurnClock } from './OnlineHud'
@@ -156,6 +159,11 @@ export function App() {
   const [railFrom, setRailFrom] = useState<Hex | null>(null) // origem da rota de ferrovia
   const [railTo, setRailTo] = useState<Hex | null>(null) // celular: destino escolhido, aguardando confirmação
   const [look, setLook] = useState(false) // online: câmera na cidade do rival
+  const [eraUp, setEraUp] = useState<number | null>(null) // celebração da era (solo)
+  const [skipAid, setSkipAid] = useState<number | null>(null) // turno em que a ajuda foi recusada
+  // Oferta de fome/Centro: fora do tutorial, sem evento aberto nem celebração na tela.
+  const offer = tut === null ? aidOffer(state) : null
+  const aidShown: Aid | null = offer && offer.kind !== 'event' && !state.event && eraUp === null && skipAid !== state.turn ? offer : null
   const pickBuilding = (id: BuildingId | null) => { setMode(id); setLink(null); setDeck(false); setWreck(false); setRailFrom(null); setRailTo(null) }
   const pickLink = (l: Link | null) => { setLink(l); setMode(null); setDeck(false); setWreck(false) }
   const toggle = (p: Panel) => setPanel(panel === p ? null : p)
@@ -203,6 +211,11 @@ export function App() {
       if (state.era > p.era) track('era_reached', { era: state.era, turn: state.turn })
       if (state.over && !p.over) track('game_over', { result: state.over, turn: state.turn, era: state.era })
     }
+    // Era nova na mesma partida: solo ganha o cartão; online só o aviso (depois do aviso do registro).
+    if (state.era > p.era && p.seed === state.seed && tut === null) {
+      if (!state.match) setEraUp(state.era)
+      else setTimeout(() => setNews(t('🎉 Era {0}!', ERAS[state.era].name)), 0)
+    }
     if (state.over && !p.over) return sfx(state.over === 'won' ? 'win' : 'lose')
     if (state.era > p.era) return sfx('era')
     if (state.centerHp < p.centerHp) sfx('hit')
@@ -223,7 +236,7 @@ export function App() {
   // how: de onde a partida veio (new, continue, sandbox, tutorial, restart, replay, after_tutorial).
   const play = (s: State, how: string) => {
     context({ mode: how === 'tutorial' ? 'tutorial' : modeOf(s), turn: s.turn, era: s.era }); track('game_started', { how })
-    if (matchId) leave(); setSolo(s); setTut(null); setPanel(null); setMode(null); setLink(null); setScreen('game') }
+    if (matchId) leave(); setSolo(s); setTut(null); setEraUp(null); setSkipAid(null); setPanel(null); setMode(null); setLink(null); setScreen('game') }
   // Sala online: quando o segundo jogador chega (ou a partida já corria), vai para o jogo.
   useEffect(() => {
     if (screen !== 'online' || !matchId || !['playing', 'waiting', 'close'].includes(online.phase)) return
@@ -275,7 +288,7 @@ export function App() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') { if (mode || link || wreck) sfx('uncard'); setMode(null); setLink(null); setWreck(false); setRailFrom(null); setRailTo(null); setPanel(null) }
-      if (e.key === 'Enter' && screen === 'game' && !fp && !state.over && !state.event) finishTurn()
+      if (e.key === 'Enter' && screen === 'game' && !fp && !state.over && !state.event && eraUp === null && !aidShown) finishTurn()
       if (e.code === 'KeyP' && screen === 'game' && !MOBILE()) { setFp(v => !v); setMode(null); setLink(null); setPanel(null) }
     }
     window.addEventListener('keydown', onKey)
@@ -418,7 +431,7 @@ export function App() {
             {match && <RivalStatus name={rivalName} mode={match.mode} rival={online.rival} turn={state.turn} clock={clock} />}
           </div>
         </div>
-        <button className="endturn" onClick={() => finishTurn()} disabled={!!state.over || !!state.event || !canEnd}>
+        <button className="endturn" onClick={() => finishTurn()} disabled={!!state.over || !!state.event || eraUp !== null || !canEnd}>
           {matchId && online.phase === 'waiting' ? t('Esperando {0}…', rivalName) : t('Fim do turno')}
         </button>
       </div>
@@ -507,9 +520,20 @@ export function App() {
                 </button>
               )
             })}
+            {/* Ajuda de crise: a opção mais barata pela metade do custo em recursos. */}
+            {offer?.kind === 'event' && (
+              <button className="opt dark" disabled={state.res.money < offer.price} onClick={() => act(() => takeAid(state, offer, 'money'), 'click', ['aid_taken', { kind: offer.kind, pay: 'money' }])}>
+                <b><Icons text={t('Pagar metade: {0}', card.options[offer.option!].label)} /></b>
+                <span><Icons text={`${offer.price} 💰`} /></span>
+              </button>
+            )}
           </div>
         </div>
       )}
+
+      {aidShown && <AidCard aid={aidShown} state={state} onWatch={null} onSkip={() => { sfx('uncard'); setSkipAid(state.turn) }}
+        onBuy={() => act(() => takeAid(state, aidShown, 'money'), 'card', ['aid_taken', { kind: aidShown.kind, pay: 'money' }])} />}
+      {eraUp !== null && <EraUp era={eraUp} turn={state.turn} onContinue={() => { sfx('click'); setEraUp(null) }} />}
 
       {/* ---------- direita: minimapa e botões ---------- */}
       <div className="right">
