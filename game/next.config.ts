@@ -6,7 +6,12 @@ const config: NextConfig = { reactStrictMode: false, allowedDevOrigins: ['127.0.
 
 // CORS da API para o build do CrazyGames (outra origem). Origem * serve: a API autentica por x-token, não por cookie.
 // Sem headers() no build do CrazyGames: output 'export' não suporta.
-if (process.env.NEXT_PUBLIC_CRAZY !== '1') {
+if (process.env.NEXT_PUBLIC_CRAZY === '1') {
+  // Build estático (zip do CrazyGames): caminhos relativos, sem as rotas de API (route.ts fica fora das extensões)
+  config.output = 'export'
+  config.assetPrefix = './'
+  config.pageExtensions = ['tsx']
+} else {
   config.headers = async () => [{
     source: '/api/:path*',
     headers: [

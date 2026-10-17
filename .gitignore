@@ -8,3 +8,4 @@ hook.cache.json
 .next/
 next-env.d.ts
 *.tsbuildinfo
+.superpowers/
