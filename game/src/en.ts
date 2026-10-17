@@ -156,7 +156,7 @@ export const EN: Record<string, string> = {
   'A tribo entra na Era {0}!': 'The tribe enters the {0} Age!',
   'A tribo acendeu a primeira fogueira.': 'The tribe lit its first campfire.',
   // motivos de parada (chaves fixas do core)
-  'em obra': 'under construction', 'sem trabalhadores': 'no workers', 'sem energia': 'no power', 'metade sem energia': 'half, no power',
+  'Explorar': 'Explore', 'em obra': 'under construction', 'sem trabalhadores': 'no workers', 'sem energia': 'no power', 'metade sem energia': 'half, no power',
   'sem trilha até o Centro': 'no trail to the Center', 'sem estrada até o Centro': 'no road to the Center',
   'sem ferrovia até o Centro': 'no railway to the Center',
   '½ sem trilha': '½ no trail', '½ sem estrada': '½ no road', '½ sem ferrovia': '½ no railway',
@@ -266,8 +266,8 @@ export const EN: Record<string, string> = {
   'Ameaças são anunciadas com ⚠️ um turno antes e atacam o Centro (❤️). Clique no invasor para atacá-lo (2 ✋) — ou construa torres.':
     'Threats are announced with ⚠️ one turn ahead and attack the Center (❤️). Click the invader to attack it (2 ✋) — or build towers.',
   'Mais adiante': 'Further on',
-  'Na Era Industrial surgem ⚡ energia (não acumula) e ☁️ poluição, que derruba a 😊. Florestas e parques limpam o ar.':
-    'In the Industrial Age come ⚡ power (does not stack) and ☁️ pollution, which drags 😊 down. Forests and parks clean the air.',
+  'Na Era Industrial surge a ⚡ energia: usinas com 👤 geram para o império todo, sem fios (não precisa ser vizinha). Fábricas e fazendas mecanizadas a consomem; se faltar, aparece ⛔ sem ⚡. Ela não acumula entre turnos. Indústrias também geram ☁️ poluição, que derruba a 😊. Florestas e parques limpam o ar.':
+    'In the Industrial Age comes ⚡ power: staffed 👤 plants supply your whole empire, no wires (they need not be adjacent). Factories and mechanized farms use it; if it runs short you see ⛔ no ⚡. It does not carry over between turns. Industry also makes ☁️ pollution, which drags 😊 down. Forests and parks clean the air.',
   'No versus, chegue ao Bronze e construa o Campo de guerra. Recrute tropas e clique em Atacar: o exército marcha sozinho e chega ao rival como invasores. Tropas em casa defendem o seu Centro.':
     'In versus, reach the Bronze Age and build the War Camp. Recruit troops and click Attack: the army marches on its own and reaches the rival as invaders. Troops at home defend your Center.',
   '{0} jogando agora': '{0} playing now',

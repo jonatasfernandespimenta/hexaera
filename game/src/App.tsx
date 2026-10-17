@@ -13,7 +13,7 @@ import { MilitaryCard, RivalStatus, useTurnClock } from './OnlineHud'
 import { autoOption, convoyMarkers, endText, neutralStrip } from './onlineView'
 import type { Convoy } from './core/convoy'
 import { Minimap } from './Minimap'
-import { Sprite, type SpriteName } from './Sprite'
+import { Icons, RES_SPRITE, Sprite, type SpriteName } from './Sprite'
 import { Trade } from './Trade'
 import { Coach, STEPS } from './Tutorial'
 import { isMuted, setMuted, sfx, startAmbience, type Sfx } from './sfx'
@@ -22,13 +22,16 @@ import { Lobby } from './Lobby'
 import { getCreds } from './net'
 import { useOnline } from './useOnline'
 import { usePresence } from './usePresence'
+import { context, track } from './track'
 
 const sign = (n: number) => (n > 0 ? `+${n}` : `${n}`)
 // Ícone de cada recurso (atlas em public/ui).
-const RES_SPRITE: Record<Res, SpriteName> = {
-  wood: 'logs', stone: 'stone', food: 'apple', iron: 'ingot', money: 'coin', knowledge: 'books', clay: 'clay', pottery: 'pottery',
-  bronze: 'bronze', weapons: 'weapons', tools: 'tools', cloth: 'cloth', coal: 'coal', steel: 'steel', goods: 'goods',
-  oil: 'oilwell', electronics: 'electronics', cars: 'cars', batteries: 'batteries', tech: 'tech',
+// Altura da barra de recursos → --bar-h (no celular ela quebra em linhas e o HUD abaixo acompanha).
+const trackBarHeight = (el: HTMLDivElement | null) => {
+  if (!el) return
+  const ro = new ResizeObserver(() => document.documentElement.style.setProperty('--bar-h', `${el.offsetHeight}px`))
+  ro.observe(el)
+  return () => ro.disconnect()
 }
 const ResIcon = ({ r, size = 16 }: { r: Res; size?: number }) => <Sprite name={RES_SPRITE[r]} size={size} />
 const Cost = ({ b }: { b: Partial<Record<Res, number>> }) => (
@@ -70,6 +73,10 @@ const store = {
   get: (k: string) => { try { return localStorage.getItem(k) } catch { return null } },
   set: (k: string, v: string) => { try { localStorage.setItem(k, v) } catch { /* sem storage: só não salva */ } },
 }
+// Modo da partida para as métricas.
+const modeOf = (s: State) => s.match?.mode ?? (s.flags.includes('sandbox') ? 'sandbox' : 'solo')
+const built = (s: State) => Object.values(s.tiles).filter(t => t.building).length
+
 const loadSave = (): State | null => { try { const s = JSON.parse(store.get(SAVE) ?? 'null'); return s && normalize(s) } catch { return null } }
 
 // Opções do Sandbox: cada linha é um seletor de botões.
@@ -166,16 +173,17 @@ export function App() {
     }),
   }
 
-  const act = (fn: () => State, s: Sfx = 'click') => {
+  // ev: evento de métrica, enviado só se a ação deu certo.
+  const act = (fn: () => State, s: Sfx = 'click', ev?: [string, Record<string, unknown>?]) => {
     if (lock) { setToast(lock); sfx('error'); return }
-    try { setState(fn()); sfx(s) } catch (e) { setToast((e as Error).message); sfx('error') }
+    try { setState(fn()); sfx(s); if (ev) track(...ev) } catch (e) { setToast((e as Error).message); sfx('error') }
   }
   // Comitiva: o estado (tropas/recursos saem) e a lista do turno mudam juntos; ambos passam pela trava.
   const send = (fn: () => { state: State; convoy: Convoy }) => {
     if (lock) { setToast(lock); sfx('error'); return false }
     try {
       const r = fn()
-      setState(r.state); online.addConvoy(r.convoy)
+      setState(r.state); online.addConvoy(r.convoy); track('convoy_sent')
       setToast(t('Comitiva a caminho: chega no turno {0}', r.convoy.arrive + 1)); sfx('card')
       return true
     } catch (e) { setToast((e as Error).message); sfx('error'); return false }
@@ -187,6 +195,14 @@ export function App() {
     const p = prev.current
     prev.current = state
     if (p === state || state.turn < p.turn) return // nova partida
+    if (p.seed === state.seed && !TEST) { // mesma partida (continuar um save troca a seed)
+      if (state.turn > p.turn) {
+        context({ turn: state.turn, era: state.era })
+        track('turn_ended', { turn: p.turn, era: p.era, pop: p.pop, buildings: built(p), tiles: Object.keys(p.tiles).length, actions_left: p.actions, happiness: happiness(p) })
+      }
+      if (state.era > p.era) track('era_reached', { era: state.era, turn: state.turn })
+      if (state.over && !p.over) track('game_over', { result: state.over, turn: state.turn, era: state.era })
+    }
     if (state.over && !p.over) return sfx(state.over === 'won' ? 'win' : 'lose')
     if (state.era > p.era) return sfx('era')
     if (state.centerHp < p.centerHp) sfx('hit')
@@ -204,10 +220,14 @@ export function App() {
 
   // Sai da partida online (as credenciais ficam: o link retoma depois).
   const leave = () => { setMatchId(null); setJoinId(null); setLook(false); clearUrl() }
-  const play = (s: State) => { if (matchId) leave(); setSolo(s); setTut(null); setPanel(null); setMode(null); setLink(null); setScreen('game') }
+  // how: de onde a partida veio (new, continue, sandbox, tutorial, restart, replay, after_tutorial).
+  const play = (s: State, how: string) => {
+    context({ mode: how === 'tutorial' ? 'tutorial' : modeOf(s), turn: s.turn, era: s.era }); track('game_started', { how })
+    if (matchId) leave(); setSolo(s); setTut(null); setPanel(null); setMode(null); setLink(null); setScreen('game') }
   // Sala online: quando o segundo jogador chega (ou a partida já corria), vai para o jogo.
   useEffect(() => {
     if (screen !== 'online' || !matchId || !['playing', 'waiting', 'close'].includes(online.phase)) return
+    context({ mode: online.state?.match?.mode ?? 'online', turn: online.state?.turn, era: online.state?.era }); track('game_started', { how: 'online' })
     setTut(null); setPanel(null); setMode(null); setLink(null); setScreen('game')
   }, [screen, matchId, online.phase])
   // Fim do turno: online envia ao servidor (travado enquanto envia ou espera o rival).
@@ -219,7 +239,7 @@ export function App() {
     return online.endTurn().then(ok => { sfx(ok ? 'turn' : 'error'); return ok })
   }
   // Relógio da partida: ao zerar, envia o turno como o botão; evento aberto é resolvido antes com a primeira opção possível.
-  const autoResolve = () => { const i = autoOption(state); if (i !== null) act(() => resolveEvent(state, i)) }
+  const autoResolve = () => { const i = autoOption(state); if (i !== null) act(() => resolveEvent(state, i), 'click', ['event_choice', { event: state.event, option: i, auto: true }]) }
   const clock = useTurnClock(matchId ? online.meta?.timer ?? 0 : 0, !!matchId && online.phase === 'playing' && !state.over, state.turn,
     !!state.event, finishTurn, autoResolve)
   // Erros da sessão online aparecem no aviso de sempre.
@@ -228,8 +248,9 @@ export function App() {
     const n = STEPS[i].setup?.(s) ?? s
     tutStart.current = n
     setState(n); setTut(i); sfx('card')
+    track('tutorial_step', { step: i + 1, title: STEPS[i].title })
   }
-  const startTutorial = () => { const g = newGame(); play(g); setHand(true); goStep(0, g) }
+  const startTutorial = () => { const g = newGame(); play(g, 'tutorial'); setHand(true); goStep(0, g) }
   const endTutorial = () => { store.set(TUT_DONE, '1'); setTut(null) }
   // Avança o passo quando o jogador faz o que foi pedido.
   useEffect(() => {
@@ -265,7 +286,7 @@ export function App() {
     if (state.over || fp) return
     if (!state.tiles[key(h)]) return act(() => explore(state, h), 'explore')
     if (wreck) {
-      if (state.tiles[key(h)].building) act(() => demolish(state, h), 'hit')
+      if (state.tiles[key(h)].building) act(() => demolish(state, h), 'hit', ['building_demolished', { building: state.tiles[key(h)].building!.id }])
     } else if (mode === 'railway') {
       // Ferrovia: 1º toque = origem, 2º = destino (constrói a rota inteira).
       if (!railFrom) {
@@ -277,13 +298,13 @@ export function App() {
         if (!path) return setToast(t('Sem caminho livre até aí.'))
         // Celular não tem hover: 1º toque no destino mostra rota e custo, 2º no mesmo hex constrói.
         if (MOBILE() && key(h) !== (railTo && key(railTo))) { sfx('hover'); return setRailTo(h) }
-        act(() => buildRail(state, path), 'link')
+        act(() => buildRail(state, path), 'link', ['building_placed', { building: 'railway', era: state.era }])
         setRailFrom(null); setRailTo(null); setMode(null)
       }
     } else if (mode) {
-      act(() => build(state, h, mode), 'build')
+      act(() => build(state, h, mode), 'build', ['building_placed', { building: mode, era: state.era }])
       setMode(null)
-    } else if (state.invaders.some(i => i.at === key(h))) act(() => hunt(state, h), 'hunt')
+    } else if (state.invaders.some(i => i.at === key(h))) act(() => hunt(state, h), 'hunt', ['invader_attacked'])
   }
 
   const inc = income(state)
@@ -319,7 +340,7 @@ export function App() {
         <color attach="background" args={['#1a0f08']} />
         <fog attach="fog" args={['#1a0f08', 18, 38]} />
         <Board state={state} buildMode={mode} linkMode={link} demolishMode={wreck} railFrom={railFrom} railTo={railTo} onHex={onHex} fp={fp} onExitFp={() => setFp(false)} focus={focus}
-          onEdge={(a, b) => link && act(() => buildLink(state, a, b, link), 'link')} />
+          onEdge={(a, b) => link && act(() => buildLink(state, a, b, link), 'link', ['link_built', { link, era: state.era }])} />
         {match && <NeutralStrip hexes={strip} />}
         {rivalAt && online.rival?.state && <group position={[rivalAt[0], 0, rivalAt[1]]}><Board ghost state={online.rival.state} /></group>}
         {markers.map(m => <ConvoyMarker key={m.id} {...m} />)}
@@ -349,13 +370,13 @@ export function App() {
           {screen === 'online' ? <Lobby matchId={matchId} joinId={joinId} phase={online.phase} error={online.error}
             onEnter={id => { setJoinId(null); setMatchId(id) }} onBack={() => { leave(); setScreen('menu') }} />
           : setup ? <SandboxSetup value={setup} onChange={setSetup} onBack={() => setSetup(null)}
-            onStart={() => { play(newGame(undefined, setup)); setSetup(null) }} /> : <div className="pcard menu">
-            {save && <button className="opt green" onClick={() => play(save)}><b>{t('Continuar')}</b><span>{t('Era {0} · turno {1}', ERAS[save.era].name, save.turn)}</span></button>}
-            <button className={`opt ${save || fresh ? 'dark' : 'green'}`} onClick={() => play(newGame())}><b>{t('Nova civilização')}</b>{save && <span>{t('substitui o jogo salvo')}</span>}</button>
+            onStart={() => { play(newGame(undefined, setup), 'sandbox'); setSetup(null) }} /> : <div className="pcard menu">
+            {save && <button className="opt green" onClick={() => play(save, 'continue')}><b>{t('Continuar')}</b><span>{t('Era {0} · turno {1}', ERAS[save.era].name, save.turn)}</span></button>}
+            <button className={`opt ${save || fresh ? 'dark' : 'green'}`} onClick={() => play(newGame(), 'new')}><b>{t('Nova civilização')}</b>{save && <span>{t('substitui o jogo salvo')}</span>}</button>
             <button className={`opt ${fresh ? 'green' : 'dark'}`} onClick={startTutorial}><b>{t('Tutorial')}</b><span>{t(fresh ? 'recomendado · 2 minutos' : 'rever as mecânicas')}</span></button>
             <button className="opt dark" onClick={() => { sfx('card'); setScreen('online') }}><b>{t('Jogar online')}</b><span>{t('coop ou versus com um amigo')}</span></button>
             <button className="opt dark" onClick={() => { sfx('card'); setSetup(SANDBOX_DEFAULT) }}><b>Sandbox</b><span>{t('sem objetivo · você ajusta o mundo')}</span></button>
-            <button className="opt dark" onClick={() => { setMuted(!mute); setMute(!mute); if (mute) sfx('click') }}><b>{t(mute ? '🔇 Som desligado' : '🔊 Som ligado')}</b></button>
+            <button className="opt dark" onClick={() => { setMuted(!mute); setMute(!mute); if (mute) sfx('click') }}><b><Icons text={t(mute ? '🔇 Som desligado' : '🔊 Som ligado')} /></b></button>
             <LangToggle />
           </div>}
         </div>
@@ -369,7 +390,7 @@ export function App() {
       <div className="vignette" />
 
       {/* ---------- topo: recursos ---------- */}
-      <div className={`bar frame ${shown.length > 12 ? 'dense' : ''}`}>
+      <div ref={trackBarHeight} className={`bar frame ${shown.length > 12 ? 'dense' : ''}`}>
         <Stat icon={<Sprite name="hand" size={28} />} value={`${state.actions}/${maxActions(state)}`} title={t('Ações por turno: 3 do Centro + {0} 👤 ociosos + estábulos/moinhos. As que sobram passam para o próximo turno (até {1}), para juntar em obras grandes.', idle(state), 2 * maxActions(state))} />
         <Stat icon={<Sprite name="people" size={30} />} value={`${state.pop}/${housing(state)}`} title={t('População / moradia')} />
         <Stat icon={<Sprite name="smile" size={28} />} value={happy} cls={happy < 30 ? 'neg' : happy >= 75 ? 'pos' : ''}
@@ -410,7 +431,7 @@ export function App() {
             <div className="art sky"><Sprite name="campfire" size={70} /></div>
             {goals.map(g => (
               <div key={g.label} className={`goal ${g.have >= g.need ? 'ok' : ''}`}>
-                <span className="check">{g.have >= g.need ? '✔' : '○'}</span>
+                <span className="check">{g.have >= g.need ? <Sprite name="check" size={14} /> : '○'}</span>
                 {g.kind === 'knowledge' ? <Sprite name="books" size={20} /> : g.kind === 'pop' ? <Sprite name="people" size={20} />
                   : <Art id={g.kind} size={20} />}
                 {t(g.label)} <b>{Math.min(g.have, g.need)}/{g.need}</b>
@@ -419,7 +440,7 @@ export function App() {
             {coop ? (
               // Coop: a era avança quando os dois votam no mesmo turno (aplicado ao fechar o turno).
               <button className="opt green" disabled={!ready || online.vote || !!lock} onClick={() => { online.setVote(true); sfx('card') }}>
-                <b>{t(online.vote ? 'Voto registrado ✔' : 'Votar para avançar')}</b>
+                <b><Icons text={t(online.vote ? 'Voto registrado ✔' : 'Votar para avançar')} /></b>
                 <span>{t(partnerVoted ? '{0} votou' : '{0} ainda não votou', rivalName)}</span>
               </button>
             ) : !(last && match) && ( // versus: na última era vence quem derrubar o outro Centro
@@ -448,23 +469,23 @@ export function App() {
                 <p className="reward">{t('Paga')}: <span className="chip"><ResIcon r="money" />{contractReward(state, contract)}</span> <span className="chip"><Sprite name="star" size={16} />{CONTRACTS[contract.def].rep}</span></p>
                 {active ? (
                   <div className="optrow">
-                    <button className="opt green" onClick={() => act(() => deliver(state, contract.id), 'coin')}><b>{t('Entregar')}</b></button>
+                    <button className="opt green" onClick={() => act(() => deliver(state, contract.id), 'coin', ['contract', { action: 'deliver' }])}><b>{t('Entregar')}</b></button>
                     <button className="opt dark" title={t('Perde o que já entregou e {0} ⭐ (vencer o prazo custa {1} ⭐)', CONTRACTS[contract.def].rep, 2 * CONTRACTS[contract.def].rep)}
-                      onClick={() => act(() => abandon(state, contract.id), 'uncard')}><b>{t('Desistir')}</b><span>−{CONTRACTS[contract.def].rep} ⭐</span></button>
+                      onClick={() => act(() => abandon(state, contract.id), 'uncard', ['contract', { action: 'abandon' }])}><b>{t('Desistir')}</b><span>−{CONTRACTS[contract.def].rep}<Sprite name="star" size={14} /></span></button>
                   </div>
                 ) : (
                   <div className="optrow">
-                    <button className="opt green" disabled={state.contracts.length >= maxContracts(state)} onClick={() => act(() => accept(state, contract.id), 'card')}>
+                    <button className="opt green" disabled={state.contracts.length >= maxContracts(state)} onClick={() => act(() => accept(state, contract.id), 'card', ['contract', { action: 'accept' }])}>
                       <b>{t('Aceitar')}</b>{maxContracts(state) === 0 && <span>{t('precisa de um Mercado')}</span>}
                     </button>
-                    <button className="opt dark" title={t('Descarta esta oferta e chega outra')} onClick={() => act(() => decline(state, contract.id), 'uncard')}>
-                      <b>{t('Recusar')}</b><span>{DECLINE_COST} ✋</span>
+                    <button className="opt dark" title={t('Descarta esta oferta e chega outra')} onClick={() => act(() => decline(state, contract.id), 'uncard', ['contract', { action: 'decline' }])}>
+                      <b>{t('Recusar')}</b><span>{DECLINE_COST}<Sprite name="hand" size={14} /></span>
                     </button>
                   </div>
                 )}
               </>
               )
-            })() : <p className="muted">{t('Construa um 🏪 Mercado para receber contratos.')}</p>}
+            })() : <p className="muted"><Icons text={t('Construa um 🏪 Mercado para receber contratos.')} /></p>}
           </div>
         )}
       </div>
@@ -476,13 +497,13 @@ export function App() {
             <header className="red">{t('Evento')}</header>
             <div className="art forest"><Sprite name={EVENT_ART[card.id] ?? 'forest'} size={110} /></div>
             <h4>{card.title}</h4>
-            <p>{card.text}</p>
+            <p><Icons text={card.text} /></p>
             {card.options.map((o, i) => {
               const err = canChoose(state, o)
               return (
-                <button key={i} className={`opt ${i === 0 ? 'green' : 'dark'}`} disabled={!!err} onClick={() => act(() => resolveEvent(state, i))}>
-                  <b>{o.requires && (err ? '🔒 ' : '🔓 ')}{o.label}</b>
-                  <span>{err ?? o.text}</span>
+                <button key={i} className={`opt ${i === 0 ? 'green' : 'dark'}`} disabled={!!err} onClick={() => act(() => resolveEvent(state, i), 'click', ['event_choice', { event: state.event, option: i, auto: false }])}>
+                  <b><Icons text={(o.requires ? (err ? '🔒 ' : '🔓 ') : '') + o.label} /></b>
+                  <span><Icons text={err ?? o.text} /></span>
                 </button>
               )
             })}
@@ -507,16 +528,16 @@ export function App() {
       {panel === 'trade' && <Trade state={state} act={act} onClose={() => setPanel(null)} />}
       {panel === 'log' && (
         <div className="popover frame">
-          <h3>📜 {t('Registro')}</h3>
-          {state.log.map((m, i) => <div key={i} style={{ opacity: 1 - i * 0.12 }}>{m}</div>)}
+          <h3><Icons text={'📜 ' + t('Registro')} /></h3>
+          {state.log.map((m, i) => <div key={i} style={{ opacity: 1 - i * 0.12 }}><Icons text={m} /></div>)}
         </div>
       )}
       {panel === 'menu' && (
         <div className="popover frame">
-          <h3>⚙️ Menu</h3>
-          <button className="opt dark" onClick={() => { setPanel(null); setTut(null); if (matchId) leave(); setScreen('menu') }}><b>{t('Menu principal')}</b></button>
-          <button className="opt dark" onClick={() => play(newGame())}><b>{t('Nova civilização')}</b></button>
-          <button className="opt dark" onClick={() => { setMuted(!mute); setMute(!mute); if (mute) sfx('click') }}><b>{t(mute ? '🔇 Som desligado' : '🔊 Som ligado')}</b></button>
+          <h3><Icons text="⚙️ Menu" /></h3>
+          <button className="opt dark" onClick={() => { if (!state.over) track('game_left', { turn: state.turn }); setPanel(null); setTut(null); if (matchId) leave(); setScreen('menu') }}><b>{t('Menu principal')}</b></button>
+          <button className="opt dark" onClick={() => { if (!state.over) track('game_left', { turn: state.turn }); play(newGame(), 'restart') }}><b>{t('Nova civilização')}</b></button>
+          <button className="opt dark" onClick={() => { setMuted(!mute); setMute(!mute); if (mute) sfx('click') }}><b><Icons text={t(mute ? '🔇 Som desligado' : '🔊 Som ligado')} /></b></button>
           <LangToggle />
         </div>
       )}
@@ -551,12 +572,12 @@ export function App() {
                   title={[where, id !== 'lumber' && b.terrains.includes('forest') ? t('derruba floresta') : '', err ?? owe ?? ''].filter(Boolean).join(' · ')}>
                   <header>{b.name}</header>
                   <div className="art"><Art id={id} /></div>
-                  <p>{b.desc}</p>
-                  <p className="req">{where}</p>
+                  <p><Icons text={b.desc} /></p>
+                  <p className="req"><Icons text={where} /></p>
                   <footer>
                     <span className="chip"><Sprite name="hand" size={16} />{b.actions}</span><Cost b={b.cost} />
-                    {b.workers > 0 && <span className="chip">👤{b.workers}</span>}
-                    <span className="chip">⏱{buildTurns(state, id)}</span>
+                    {b.workers > 0 && <span className="chip"><Sprite name="worker" size={16} />{b.workers}</span>}
+                    <span className="chip"><Sprite name="timer" size={16} />{buildTurns(state, id)}</span>
                   </footer>
                 </button>
               )
@@ -565,14 +586,14 @@ export function App() {
         </div>
       )}
 
-      {wreck && <div className="hint frame">{t('Demolir ({0} ✋): toque numa construção · volta metade do material', DEMOLISH_COST)} <button className="x" onClick={() => { sfx('uncard'); setWreck(false) }}>✕</button></div>}
-      {mode && <div className="hint frame">{mode === 'railway' ? t(railFrom ? (railTo ? 'Ferrovia: toque de novo no destino para construir' : 'Ferrovia: toque no destino (a rota acende com o custo)') : 'Ferrovia: toque na origem — Centro, trilho ou hex livre') : t('{0}: escolha um hex destacado', BUILDINGS[mode].name)} <button className="x" onClick={() => { sfx('uncard'); pickBuilding(null) }}>✕</button></div>}
-      {link && <div className="hint frame">{t('{0}: toque numa borda entre dois hexes', LINKS[link].name)} <button className="x" onClick={() => { sfx('uncard'); pickLink(null) }}>✕</button></div>}
-      {toast && <div className="toast frame">{toast}</div>}
-      {!toast && news && <div className="news frame">{news}</div>}
+      {wreck && <div className="hint frame"><Icons text={t('Demolir ({0} ✋): toque numa construção · volta metade do material', DEMOLISH_COST)} /> <button className="x" onClick={() => { sfx('uncard'); setWreck(false) }}><Sprite name="cross" size={14} /></button></div>}
+      {mode && <div className="hint frame">{mode === 'railway' ? t(railFrom ? (railTo ? 'Ferrovia: toque de novo no destino para construir' : 'Ferrovia: toque no destino (a rota acende com o custo)') : 'Ferrovia: toque na origem — Centro, trilho ou hex livre') : t('{0}: escolha um hex destacado', BUILDINGS[mode].name)} <button className="x" onClick={() => { sfx('uncard'); pickBuilding(null) }}><Sprite name="cross" size={14} /></button></div>}
+      {link && <div className="hint frame">{t('{0}: toque numa borda entre dois hexes', LINKS[link].name)} <button className="x" onClick={() => { sfx('uncard'); pickLink(null) }}><Sprite name="cross" size={14} /></button></div>}
+      {toast && <div className="toast frame"><Icons text={toast} /></div>}
+      {!toast && news && <div className="news frame"><Icons text={news} /></div>}
 
-      {tut !== null && <Coach idx={tut} onNext={() => goStep(tut + 1)} onSkip={() => { endTutorial(); setScreen('menu') }}
-        onFinish={() => { endTutorial(); play(newGame()) }} />}
+      {tut !== null && <Coach idx={tut} onNext={() => goStep(tut + 1)} onSkip={() => { track('tutorial_skipped', { step: tut + 1 }); endTutorial(); setScreen('menu') }}
+        onFinish={() => { track('tutorial_completed'); endTutorial(); play(newGame(), 'after_tutorial') }} />}
 
       {state.over && match && (
         <div className="over">
@@ -591,7 +612,7 @@ export function App() {
             {state.over === 'won' ? (
               <>
                 <h2>{t('Civilização concluída!')}</h2>
-                <p>{t('Da fogueira à {0} em {1} turnos, com {2} 👤 e {3} ⭐.', ERAS[state.era].center, state.turn, state.pop, state.rep)}</p>
+                <p><Icons text={t('Da fogueira à {0} em {1} turnos, com {2} 👤 e {3} ⭐.', ERAS[state.era].center, state.turn, state.pop, state.rep)} /></p>
                 <button className="opt dark" onClick={() => setState(keepPlaying(state))}><b>{t('Continuar jogando')}</b><span>{t('sem fim, no mesmo tabuleiro')}</span></button>
               </>
             ) : (
@@ -600,7 +621,7 @@ export function App() {
                 <p>{t('Sua tribo sobreviveu {0} turnos.', state.turn)}</p>
               </>
             )}
-            <button className="opt green" onClick={() => play(newGame())}><b>{t('Nova civilização')}</b></button>
+            <button className="opt green" onClick={() => play(newGame(), 'replay')}><b>{t('Nova civilização')}</b></button>
           </div>
         </div>
       )}
@@ -610,7 +631,7 @@ export function App() {
 
 // Alterna pt ⇄ en (recarrega; a partida já está salva).
 const LangToggle = () => (
-  <button className="opt dark" onClick={() => setLang(lang === 'pt' ? 'en' : 'pt')}><b>🌐 {lang === 'pt' ? 'Português' : 'English'}</b></button>
+  <button className="opt dark" onClick={() => setLang(lang === 'pt' ? 'en' : 'pt')}><b><Sprite name="globe" size={16} /> {lang === 'pt' ? 'Português' : 'English'}</b></button>
 )
 
 function Stat({ icon, value, delta, title, cls = '' }: { icon: React.ReactNode; value: number | string; delta?: number; title: string; cls?: string }) {

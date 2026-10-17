@@ -1,3 +1,5 @@
+import { RES, type Res } from './core/data'
+
 // Ícones e artes das folhas em public/ui. Regiões [x, y, w, h, folha] em pixels da folha (folha 0 se omitida).
 const SHEETS = [
   { url: '/ui/atlas.png', w: 1448, h: 1086 },
@@ -8,6 +10,9 @@ const SHEETS = [
   { url: '/ui/atlas6.png', w: 1254, h: 1254 }, // Contemporânea + recursos modernos
   { url: '/ui/atlas7.png', w: 1254, h: 1254 }, // comida por era, Moderna, Rodovia
   { url: '/ui/atlas8.png', w: 1254, h: 1254 }, // ilustrações de eventos, ícones de ameaças
+  { url: '/ui/atlas9.png', w: 1536, h: 1024 }, // relógio, proibido, fogo, cadeado, escudo
+  { url: '/ui/atlas10.png', w: 1254, h: 1254 }, // setas, ok/x, som, idioma
+  { url: '/ui/atlas11.png', w: 2000, h: 667 }, // dedo, alerta, aperto de mão, bandeira branca
 ]
 
 export const SPRITES = {
@@ -44,9 +49,21 @@ export const SPRITES = {
   ev_pollution: [103, 335, 481, 383, 7], ev_trade: [651, 379, 503, 336, 7],
   th_wolf: [30, 712, 272, 262, 7], th_bandit: [336, 712, 276, 262, 7], th_swords: [640, 712, 275, 262, 7], th_army: [948, 712, 278, 262, 7],
   th_dynamite: [186, 958, 266, 262, 7], th_spy: [494, 958, 272, 264, 7], th_cyber: [811, 958, 279, 265, 7],
+  timer: [828, 578, 83, 96, 8], noentry: [971, 584, 88, 90, 8], fire: [1119, 579, 80, 94, 8], lock: [1265, 583, 78, 94, 8],
+  shield: [1190, 892, 94, 102, 8],
+  unlock: [96, 73, 281, 376, 9], up: [479, 123, 294, 324, 9], arrow: [866, 161, 322, 285, 9], check: [78, 531, 328, 262, 9],
+  cross: [479, 512, 295, 296, 9], mute: [873, 511, 276, 308, 9], sound: [63, 875, 359, 305, 9], globe: [467, 854, 328, 330, 9],
+  cog: [871, 862, 321, 321, 9],
+  point: [841, 103, 263, 179, 10], warn: [1124, 374, 232, 216, 10], deal: [1393, 395, 306, 195, 10], flag: [1740, 351, 227, 246, 10],
 } satisfies Record<string, number[]>
 
 export type SpriteName = keyof typeof SPRITES
+
+// Folha e recorte de um sprite (para desenhar em canvas, ex.: texturas 3D).
+export function spriteRect(name: SpriteName) {
+  const [x, y, w, h, sheet = 0] = SPRITES[name] as number[]
+  return { url: SHEETS[sheet].url, x, y, w, h }
+}
 
 // Mostra a região do atlas encaixada (sem distorcer) numa caixa size×size.
 export function Sprite({ name, size }: { name: SpriteName; size: number }) {
@@ -63,4 +80,26 @@ export function Sprite({ name, size }: { name: SpriteName; size: number }) {
       }} />
     </span>
   )
+}
+
+export const RES_SPRITE: Record<Res, SpriteName> = {
+  wood: 'logs', stone: 'stone', food: 'apple', iron: 'ingot', money: 'coin', knowledge: 'books', clay: 'clay', pottery: 'pottery',
+  bronze: 'bronze', weapons: 'weapons', tools: 'tools', cloth: 'cloth', coal: 'coal', steel: 'steel', goods: 'goods',
+  oil: 'oilwell', electronics: 'electronics', cars: 'cars', batteries: 'batteries', tech: 'tech',
+}
+
+// Emoji dos textos → ícone do atlas. Chaves sem o seletor de variação (U+FE0F); o regex o engole.
+const EMOJI: Record<string, SpriteName> = {
+  ...Object.fromEntries((Object.keys(RES) as Res[]).map(r => [RES[r].icon.replace('\uFE0F', ''), RES_SPRITE[r]])),
+  '✋': 'hand', '👤': 'worker', '😊': 'smile', '⚡': 'bolt', '☁': 'smog', '⭐': 'star', '❤': 'heart', '⏱': 'timer',
+  '⛔': 'noentry', '🔥': 'fire', '🔒': 'lock', '⚔': 'th_swords', '🛡': 'shield', '📜': 'scroll', '🏪': 'market',
+  '🔓': 'unlock', '⬆': 'up', '→': 'arrow', '👉': 'point', '⚠': 'warn', '🤝': 'deal', '🏳': 'flag', '✔': 'check', '✅': 'check', '✕': 'cross', '❌': 'cross',
+  '🔇': 'mute', '🔊': 'sound', '🌐': 'globe', '⚙': 'cog', '🛖': 'hut',
+  '🐺': 'th_wolf', '🪓': 'th_bandit', '🧨': 'th_dynamite', '🕵': 'th_spy', '💻': 'th_cyber',
+}
+const EMOJI_RE = new RegExp(`(${Object.keys(EMOJI).join('|')})\uFE0F?`, 'u')
+
+// Texto com os emoji conhecidos trocados por <Sprite>; o resto continua texto.
+export function Icons({ text, size = 16 }: { text: string; size?: number }) {
+  return <>{text.split(EMOJI_RE).map((p, i) => (i % 2 ? <Sprite key={i} name={EMOJI[p]} size={size} /> : p))}</>
 }

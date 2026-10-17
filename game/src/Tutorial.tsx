@@ -1,8 +1,9 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { BUILDINGS, CONTRACTS, THREATS, type BuildingId } from './core/data'
 import { terrainAt, type State } from './core/game'
 import { key, neighbors } from './core/hex'
 import { t } from './i18n'
+import { Icons } from './Sprite'
 
 // Tutorial guiado sobre uma partida de verdade: cada passo pode preparar o estado (setup) e
 // avança sozinho quando o jogador faz o que foi pedido (done); sem done, avança com "Próximo".
@@ -125,7 +126,7 @@ export const STEPS: Step[] = [
   },
   {
     title: 'Mais adiante',
-    text: 'Na Era Industrial surgem ⚡ energia (não acumula) e ☁️ poluição, que derruba a 😊. Florestas e parques limpam o ar.',
+    text: 'Na Era Industrial surge a ⚡ energia: usinas com 👤 geram para o império todo, sem fios (não precisa ser vizinha). Fábricas e fazendas mecanizadas a consomem; se faltar, aparece ⛔ sem ⚡. Ela não acumula entre turnos. Indústrias também geram ☁️ poluição, que derruba a 😊. Florestas e parques limpam o ar.',
   },
   {
     title: 'Jogar online',
@@ -142,23 +143,31 @@ type Props = { idx: number; onNext: () => void; onSkip: () => void; onFinish: ()
 export function Coach({ idx, onNext, onSkip, onFinish }: Props) {
   const step = STEPS[idx]
   const last = idx === STEPS.length - 1
+  const [up, setUp] = useState(false) // alvo na metade de baixo → balão sobe (celular)
 
   // Destaque: o alvo pode surgir depois (painel, carta de evento), então reaplica periodicamente.
   useEffect(() => {
+    setUp(false)
     if (!step.target) return
-    const mark = () => document.querySelector(step.target!)?.classList.add('tut-focus')
+    const mark = () => {
+      const el = document.querySelector(step.target!)
+      if (!el) return
+      el.classList.add('tut-focus')
+      const r = el.getBoundingClientRect()
+      setUp(r.top + r.height / 2 > innerHeight / 2)
+    }
     mark()
     const t = setInterval(mark, 300)
     return () => { clearInterval(t); document.querySelectorAll('.tut-focus').forEach(e => e.classList.remove('tut-focus')) }
   }, [idx])
 
   return (
-    <div className="coach pcard" key={idx}>
+    <div className={`coach pcard ${up ? 'up' : ''}`} key={idx}>
       <header className="gold">{t(step.title)}<small>{idx + 1}/{STEPS.length}</small></header>
-      <p>{t(step.text)}</p>
+      <p><Icons text={t(step.text)} /></p>
       {last ? <button className="opt green" onClick={onFinish}><b>{t('Começar partida')}</b></button>
         : !step.done ? <button className="opt green" onClick={onNext}><b>{t('Próximo')}</b></button>
-        : <p className="muted">👉 {t('Faça a ação para continuar')}</p>}
+        : <p className="muted"><Icons text={'👉 ' + t('Faça a ação para continuar')} /></p>}
       {!last && <button className="skip" onClick={onSkip}>{t('Pular tutorial')}</button>}
     </div>
   )

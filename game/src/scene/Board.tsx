@@ -7,7 +7,7 @@ import { sfx } from '../sfx'
 import { railNew, railPath, terrainAt, linked, offGrid, canLink, canPlace, centerMax, edgeKey, exploreCost, hiddenHexes, linkCost, staffed, stopped, type State, type Tile } from '../core/game'
 import { distance, key, neighbors, parse, toWorld, type Hex } from '../core/hex'
 import { Table } from './Table'
-import { Sprite, type SpriteName } from '../Sprite'
+import { Icons, Sprite, type SpriteName } from '../Sprite'
 import { t } from '../i18n'
 
 // Ícone de cada ameaça, na ordem de THREATS (uma por era).
@@ -234,7 +234,7 @@ function Campfire({ hp, max }: { hp: number; max: number }) {
       <Vox p={[0, 0.12, 0]} s={[0.16, 0.14, 0.16]} c="#ff8a1c" e="#ff6a00" />
       <Vox p={[0, 0.24, 0]} s={[0.08, 0.1, 0.08]} c="#ffd24a" e="#ffb000" />
       {hp < max && (
-        <Html zIndexRange={[50, 0]} center position={[0, 0.9, 0]} className="tip bad">🔥 ❤️{hp}/{max}</Html>
+        <Html zIndexRange={[50, 0]} center position={[0, 0.9, 0]} className="tip bad"><Icons text={`🔥 ❤️${hp}/${max}`} /></Html>
       )}
       <pointLight ref={light} position={[0, 0.5, 0]} color="#ff9a40" distance={4} decay={1.5} />
       {/* estandarte do Centro */}
@@ -975,7 +975,7 @@ function Invader({ hp, kind }: { hp: number; kind: number }) {
         <Vox key={`${x}${z}`} p={[x, 0.03, z]} s={[0.04, 0.06, 0.04]} c="#55555a" />
       ))}
       </>}
-      <Html zIndexRange={[50, 0]} center position={[0, 0.5, 0]} className="tip bad"><Sprite name={THREAT_ART[kind]} size={18} /> ❤️{hp}</Html>
+      <Html zIndexRange={[50, 0]} center position={[0, 0.5, 0]} className="tip bad"><Sprite name={THREAT_ART[kind]} size={18} /> <Icons text={`❤️${hp}`} /></Html>
     </group>
   )
 }
@@ -1279,7 +1279,7 @@ export function ConvoyMarker({ x, z, kind, n, mine }: { x: number; z: number; ki
       <Vox p={[0, 0.1, 0]} s={[0.28, 0.2, 0.2]} c={kind === 'cargo' ? '#c8a26a' : '#5b3a1e'} />
       <Vox p={[0.1, 0.4, 0]} s={[0.03, 0.6, 0.03]} c="#5b3a1e" />
       <Vox p={[0.2, 0.6, 0]} s={[0.18, 0.16, 0.02]} c={c} />
-      <Html zIndexRange={[50, 0]} center position={[0, 0.95, 0]} className={`tip ${!mine && kind === 'army' ? 'warn' : ''}`}>{icon} {n}</Html>
+      <Html zIndexRange={[50, 0]} center position={[0, 0.95, 0]} className={`tip ${!mine && kind === 'army' ? 'warn' : ''}`}><Icons text={`${icon} ${n}`} /></Html>
     </group>
   )
 }
@@ -1396,31 +1396,31 @@ export function Board({ state, buildMode = null, linkMode = null, onHex, onEdge,
               <Html zIndexRange={[50, 0]} center position={[0, 1.2 + lift, 0]} className="tip warn"><Sprite name={THREAT_ART[raid?.kind ?? state.era]} size={18} /> {t('ataque no próximo turno')}</Html>
             )}
             {b && b.hp < BUILDINGS[b.id].hp && (
-              <Html zIndexRange={[50, 0]} center position={[0.4, 0.9 + lift, 0]} className="tip bad">❤️{b.hp}</Html>
+              <Html zIndexRange={[50, 0]} center position={[0.4, 0.9 + lift, 0]} className="tip bad"><Icons text={`❤️${b.hp}`} /></Html>
             )}
             {why && hover !== k && (
-              <Html zIndexRange={[50, 0]} center position={[0, 0.85 + lift, 0]} className="tip bad">{t(STOP_SHORT[why])}</Html>
+              <Html zIndexRange={[50, 0]} center position={[0, 0.85 + lift, 0]} className="tip bad"><Icons text={t(STOP_SHORT[why])} /></Html>
             )}
             {half && hover !== k && (
-              <Html zIndexRange={[50, 0]} center position={[0, 0.85 + lift, 0]} className="tip warn">{t(STOP_SHORT[half])}</Html>
+              <Html zIndexRange={[50, 0]} center position={[0, 0.85 + lift, 0]} className="tip warn"><Icons text={t(STOP_SHORT[half])} /></Html>
             )}
             {preview && target === k && (
               <Html zIndexRange={[60, 0]} center position={[0, 1.15 + lift, 0]} className="tip route">
                 <b>{t(fresh === 1 ? 'Ferrovia · 1 trilho' : 'Ferrovia · {0} trilhos', fresh)}</b>
-                <span className={railCost.actions > state.actions ? 'neg' : ''}>{railCost.actions} ✋ ({t('tem {0}', state.actions)})</span>
+                <span className={railCost.actions > state.actions ? 'neg' : ''}><Icons text={`${railCost.actions} ✋ (${t('tem {0}', state.actions)})`} /></span>
                 {(Object.entries(BUILDINGS.railway.cost) as [Res, number][]).map(([r]) => (
-                  <span key={r} className={railCost[r] > state.res[r] ? 'neg' : ''}>{railCost[r]} {RES[r].icon} ({t('tem {0}', state.res[r])})</span>
+                  <span key={r} className={railCost[r] > state.res[r] ? 'neg' : ''}><Icons text={`${railCost[r]} ${RES[r].icon} (${t('tem {0}', state.res[r])})`} /></span>
                 ))}
                 {railTo && <small>{t('toque de novo para construir')}</small>}
               </Html>
             )}
             {hover === k && !preview && tile.terrain !== 'center' && (
               <Html zIndexRange={[50, 0]} center position={[0, 1.1 + lift, 0]} className="tip">
-                {wolves.length > 0 && !buildMode ? t('Atacar {0}', THREATS[wolves[0].kind].name.toLowerCase()) + ` · ${HUNT_COST} ✋ · ` : ''}
-                {TERRAINS[tile.terrain].name}
-                {b && ` · ${BUILDINGS[b.id].name}${b.turnsLeft ? ` (⏱ ${b.turnsLeft})` : ''}`}
-                {why && ` · ⛔ ${t(why)}`}
-                {half && ` · ${t('rende metade: {0}', t(half))}`}
+                <Icons text={(wolves.length > 0 && !buildMode ? t('Atacar {0}', THREATS[wolves[0].kind].name.toLowerCase()) + ` · ${HUNT_COST} ✋ · ` : '')
+                  + TERRAINS[tile.terrain].name
+                  + (b ? ` · ${BUILDINGS[b.id].name}${b.turnsLeft ? ` (⏱ ${b.turnsLeft})` : ''}` : '')
+                  + (why ? ` · ⛔ ${t(why)}` : '')
+                  + (half ? ` · ${t('rende metade: {0}', t(half))}` : '')} />
               </Html>
             )}
           </group>
@@ -1451,7 +1451,7 @@ export function Board({ state, buildMode = null, linkMode = null, onHex, onEdge,
             </mesh>
             {on && (
               <Html zIndexRange={[50, 0]} center position={[0, 0.4, 0]} className="tip">
-                {LINKS[linkMode].name} · {actions} ✋{Object.entries(cost).map(([r, v]) => ` ${v} ${RES[r as Res].icon}`).join('')}
+                <Icons text={`${LINKS[linkMode].name} · ${actions} ✋` + Object.entries(cost).map(([r, v]) => ` ${v} ${RES[r as Res].icon}`).join('')} />
               </Html>
             )}
           </group>
@@ -1469,10 +1469,10 @@ export function Board({ state, buildMode = null, linkMode = null, onHex, onEdge,
               <Engraving kind={hintOf(state.seed, h)} />
             </Piece>
             {hover === k ? (
-              <Html zIndexRange={[50, 0]} center position={[0, 0.9, 0]} className={`tip ${can ? '' : 'bad'}`}>Explorar · {cost} ✋</Html>
+              <Html zIndexRange={[50, 0]} center position={[0, 0.9, 0]} className={`tip ${can ? '' : 'bad'}`}><Icons text={`${t('Explorar')} · ${cost} ✋`} /></Html>
             ) : (
               // Custo sempre visível (no celular não existe "passar o mouse").
-              <Html zIndexRange={[40, 0]} center position={[0, H + 0.05, 0.42]} className={`tip cost ${can ? '' : 'bad'}`}>{cost} ✋</Html>
+              <Html zIndexRange={[40, 0]} center position={[0, H + 0.05, 0.42]} className={`tip cost ${can ? '' : 'bad'}`}><Icons text={`${cost} ✋`} /></Html>
             )}
           </group>
         )

@@ -4,8 +4,9 @@ import {
 } from './core/game'
 import type { Sfx } from './sfx'
 import { t } from './i18n'
+import { Icons, Sprite } from './Sprite'
 
-type Props = { state: State; act: (fn: () => State, s?: Sfx) => void; onClose: () => void }
+type Props = { state: State; act: (fn: () => State, s?: Sfx, ev?: [string, Record<string, unknown>?]) => void; onClose: () => void }
 
 const bag = (b: Partial<Record<Res, number>>) =>
   Object.entries(b).filter(([, v]) => v).map(([r, v]) => `${v} ${RES[r as Res].icon}`).join(' + ')
@@ -22,13 +23,13 @@ export function Trade({ state, act, onClose }: Props) {
       <div key={c.id} className="contract">
         <b>{d.client}</b>
         <span>{bag(c.left)}</span>
-        <small>{t('⏱ {0} turnos · {1} 💰 · +{2} ⭐ (falha −{3})', c.turns, contractReward(state, c), d.rep, 2 * d.rep)}</small>
+        <small><Icons text={t('⏱ {0} turnos · {1} 💰 · +{2} ⭐ (falha −{3})', c.turns, contractReward(state, c), d.rep, 2 * d.rep)} /></small>
         {active ? <>
-          <button onClick={() => act(() => deliver(state, c.id), 'coin')}>{t('Entregar')}</button>
-          <button onClick={() => act(() => abandon(state, c.id), 'uncard')}>{t('Desistir (−{0} ⭐)', d.rep)}</button>
+          <button onClick={() => act(() => deliver(state, c.id), 'coin', ['contract', { action: 'deliver' }])}>{t('Entregar')}</button>
+          <button onClick={() => act(() => abandon(state, c.id), 'uncard', ['contract', { action: 'abandon' }])}><Icons text={t('Desistir (−{0} ⭐)', d.rep)} /></button>
         </> : <>
-          <button onClick={() => act(() => accept(state, c.id), 'card')}>{t('Aceitar')}</button>
-          <button onClick={() => act(() => decline(state, c.id), 'uncard')}>{t('Recusar ({0} ✋)', DECLINE_COST)}</button>
+          <button onClick={() => act(() => accept(state, c.id), 'card', ['contract', { action: 'accept' }])}>{t('Aceitar')}</button>
+          <button onClick={() => act(() => decline(state, c.id), 'uncard', ['contract', { action: 'decline' }])}><Icons text={t('Recusar ({0} ✋)', DECLINE_COST)} /></button>
         </>}
       </div>
     )
@@ -37,8 +38,8 @@ export function Trade({ state, act, onClose }: Props) {
   return (
     <div className="trade frame">
       <header>
-        <h3>🏪 {t('Mercado')}</h3>
-        <button className="x" onClick={onClose}>✕</button>
+        <h3><Icons text={'🏪 ' + t('Mercado')} /></h3>
+        <button className="x" onClick={onClose}><Sprite name="cross" size={14} /></button>
       </header>
       {limit === 0 ? (
         <p className="muted">{t('Construa um Mercado conectado ao Centro para negociar e aceitar contratos.')}</p>
@@ -51,8 +52,8 @@ export function Trade({ state, act, onClose }: Props) {
                 <tr key={r}>
                   <td>{RES[r].icon} {RES[r].name}</td>
                   <td>{state.res[r]}</td>
-                  <td><button onClick={e => act(() => trade(state, r, -qty(e)), 'coin')}>{t('Vender {0}💰', sellPrice(state, r))}</button></td>
-                  <td><button onClick={e => act(() => trade(state, r, qty(e)), 'coin')}>{t('Comprar {0}💰', buyPrice(state, r))}</button></td>
+                  <td><button onClick={e => act(() => trade(state, r, -qty(e)), 'coin', ['trade', { res: r, qty: -qty(e) }])}><Icons text={t('Vender {0}💰', sellPrice(state, r))} /></button></td>
+                  <td><button onClick={e => act(() => trade(state, r, qty(e)), 'coin', ['trade', { res: r, qty: qty(e) }])}><Icons text={t('Comprar {0}💰', buyPrice(state, r))} /></button></td>
                 </tr>
               ))}
             </tbody>

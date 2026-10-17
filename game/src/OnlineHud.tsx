@@ -7,6 +7,7 @@ import type { Mode } from './core/match'
 import { t } from './i18n'
 import { carriers, shouldFire, shouldResolve, type ClockRun } from './onlineView'
 import type { RivalView } from './server/matches'
+import { Icons } from './Sprite'
 
 type Sent = { state: State; convoy: Convoy }
 const errOf = (fn: () => unknown) => { try { fn(); return null } catch (e) { return (e as Error).message } }
@@ -91,7 +92,7 @@ export function MilitaryCard({ state, mode, outbox, act, send, icon }: MilitaryP
   return (
     <div className="pcard military">
       <header className="red">{t(mode === 'versus' ? 'Exército' : 'Tropas e cargas')}</header>
-      <p className="troops"><b>{t('Tropas: {0}', state.troops)}</b>{away > 0 && <span> · {t('👤 {0} carregando', away)}</span>}</p>
+      <p className="troops"><b>{t('Tropas: {0}', state.troops)}</b>{away > 0 && <span> · <Icons text={t('👤 {0} carregando', away)} /></span>}</p>
       <button className="opt green" disabled={!!noRecruit} title={noRecruit ?? ''} onClick={() => act(() => recruit(state))}>
         <b>{t('Recrutar')}</b>
         <span>{noRecruit ?? <>{Object.entries(TROOP_COST).map(([r, v]) => <span key={r} className="chip">{icon(r as Res)}{v}</span>)} 1 ✋ · 1 👤</>}</span>

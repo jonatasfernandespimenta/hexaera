@@ -1,6 +1,7 @@
 import { useFrame } from '@react-three/fiber'
 import { useMemo, useRef } from 'react'
 import { CanvasTexture, NearestFilter, RepeatWrapping, SRGBColorSpace, type PointLight } from 'three'
+import { spriteRect, type SpriteName } from '../Sprite'
 import { Vox } from './voxbox'
 
 // Mesa de madeira + props decorativos (ver vault: Direção Visual → Mesa e ambiente).
@@ -42,18 +43,27 @@ function woodTexture() {
   return t
 }
 
-const emojiTex = (e: string, bg: string) =>
-  canvasTex(64, 64, g => {
+// Fundo liso + sprite do atlas no centro; o sprite entra quando a folha carrega.
+function iconTex(name: SpriteName, bg: string) {
+  const t = canvasTex(64, 64, g => {
     g.fillStyle = bg
     g.fillRect(0, 0, 64, 64)
-    g.font = '40px serif'
-    g.textAlign = 'center'
-    g.textBaseline = 'middle'
-    g.fillText(e, 32, 36)
   })
+  const { url, x, y, w, h } = spriteRect(name)
+  const img = new Image()
+  img.onload = () => {
+    const g = (t.image as HTMLCanvasElement).getContext('2d')!
+    const k = 46 / Math.max(w, h)
+    g.imageSmoothingEnabled = false
+    g.drawImage(img, x, y, w, h, 32 - (w * k) / 2, 32 - (h * k) / 2, w * k, h * k)
+    t.needsUpdate = true
+  }
+  img.src = url
+  return t
+}
 
-function Die({ p, rot, faces }: { p: [number, number, number]; rot: [number, number, number]; faces: string[] }) {
-  const mats = useMemo(() => faces.map(f => emojiTex(f, '#efe4cc')), [faces])
+function Die({ p, rot, faces }: { p: [number, number, number]; rot: [number, number, number]; faces: SpriteName[] }) {
+  const mats = useMemo(() => faces.map(f => iconTex(f, '#efe4cc')), [faces])
   return (
     <mesh position={p} rotation={rot} castShadow>
       <boxGeometry args={[0.5, 0.5, 0.5]} />
@@ -72,8 +82,8 @@ function Meeple({ p, c, ry = 0, lying = false }: { p: [number, number, number]; 
   )
 }
 
-function Coin({ p, c, icon }: { p: [number, number, number]; c: string; icon: string }) {
-  const top = useMemo(() => emojiTex(icon, c), [icon, c])
+function Coin({ p, c, icon }: { p: [number, number, number]; c: string; icon: SpriteName }) {
+  const top = useMemo(() => iconTex(icon, c), [icon, c])
   return (
     <mesh position={p} castShadow>
       <cylinderGeometry args={[0.3, 0.3, 0.08, 16]} />
@@ -122,14 +132,14 @@ export function Table() {
       <Meeple p={[9.3, 0, 3.4]} c="#c8302a" ry={0.8} />
 
       {/* moedas */}
-      <Coin p={[-7, 0.04, 6.4]} c="#e0b13a" icon="👑" />
-      <Coin p={[-6.4, 0.04, 7.1]} c="#e0b13a" icon="🛖" />
-      <Coin p={[-7.4, 0.04, 7.6]} c="#9a9aa0" icon="🪨" />
+      <Coin p={[-7, 0.04, 6.4]} c="#e0b13a" icon="star" />
+      <Coin p={[-6.4, 0.04, 7.1]} c="#e0b13a" icon="hut" />
+      <Coin p={[-7.4, 0.04, 7.6]} c="#9a9aa0" icon="stone" />
 
       {/* dados com ícones de recurso */}
-      <Die p={[9, 0.25, 6]} rot={[0, 0.5, 0]} faces={['🪵', '🍖', '🪨', '💰', '😊', '📚']} />
-      <Die p={[10, 0.25, 5.2]} rot={[0, -0.3, 0]} faces={['💰', '🪨', '🍖', '🪵', '📚', '😊']} />
-      <Die p={[9.6, 0.25, 7.1]} rot={[0, 1.1, 0]} faces={['🪨', '😊', '🪵', '🍖', '💰', '📚']} />
+      <Die p={[9, 0.25, 6]} rot={[0, 0.5, 0]} faces={['logs', 'apple', 'stone', 'coin', 'smile', 'books']} />
+      <Die p={[10, 0.25, 5.2]} rot={[0, -0.3, 0]} faces={['coin', 'stone', 'apple', 'logs', 'books', 'smile']} />
+      <Die p={[9.6, 0.25, 7.1]} rot={[0, 1.1, 0]} faces={['stone', 'smile', 'logs', 'apple', 'coin', 'books']} />
 
       {/* baralho virado */}
       <group position={[-9, 0, 9]} rotation={[0, -0.2, 0]}>

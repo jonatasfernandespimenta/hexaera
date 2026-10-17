@@ -58,7 +58,7 @@ button { font: inherit; cursor: pointer; }
 .bar.dense .stat .sprite { transform: scale(0.78); margin: -3px; }
 
 /* ---------- turno ---------- */
-.turn { position: fixed; top: 12px; right: 16px; display: flex; gap: 14px; align-items: stretch; }
+.turn { position: fixed; top: 12px; right: 16px; display: flex; gap: 14px; align-items: stretch; z-index: 65; }
 .turnbox { display: flex; align-items: center; gap: 10px; padding: 6px 14px 6px 10px; }
 .turnbox .sun { font-size: 34px; text-shadow: none; filter: drop-shadow(0 0 6px #ffcf4a); }
 .turnbox b { display: block; font-size: 20px; }
@@ -76,7 +76,7 @@ button { font: inherit; cursor: pointer; }
 .endturn:disabled { opacity: 0.5; cursor: default; }
 
 /* ---------- cartas de pergaminho (evento, contrato, objetivo) ---------- */
-.side { position: fixed; top: 14px; left: 16px; width: 210px; display: flex; flex-direction: column; gap: 14px; }
+.side { position: fixed; top: 14px; left: 16px; width: 210px; display: flex; flex-direction: column; gap: 14px; z-index: 65; }
 .pcard {
   background: linear-gradient(var(--parch), var(--parch-2)); color: var(--ink);
   border: 4px solid var(--wood-edge); outline: 3px solid var(--wood-dark);
@@ -126,7 +126,7 @@ button { font: inherit; cursor: pointer; }
 @keyframes deal { from { transform: translate(-42vw, -30vh) rotate(-25deg) scale(0.4); opacity: 0; } 60% { opacity: 1; } }
 
 /* ---------- direita: minimapa e botões redondos ---------- */
-.right { position: fixed; top: 96px; right: 16px; display: flex; flex-direction: column; align-items: flex-end; gap: 14px; }
+.right { position: fixed; top: 96px; right: 16px; display: flex; flex-direction: column; align-items: flex-end; gap: 14px; z-index: 65; }
 .minimap {
   width: 200px; height: 190px; padding: 10px;
   background: linear-gradient(var(--parch), var(--parch-2));
@@ -145,7 +145,7 @@ button { font: inherit; cursor: pointer; }
 .popover h3, .trade h3 { margin: 4px 0 8px; font-size: 16px; color: var(--gold); }
 
 /* ---------- mão de cartas (leque) ---------- */
-.dock { position: fixed; bottom: 6px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px; max-width: calc(100vw - 480px); }
+.dock { position: fixed; bottom: 6px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px; max-width: calc(100vw - 480px); z-index: 65; }
 .tabs { display: flex; gap: 4px; position: relative; z-index: 1; }
 .tabs button { background: var(--wood); color: #f4e6c4; border: 2px solid var(--wood-edge); padding: 2px 14px; font-size: 14px; text-shadow: var(--outline); }
 .tabs button.sel { border-color: var(--gold); color: var(--gold); }
@@ -204,7 +204,7 @@ button { font: inherit; cursor: pointer; }
 .card.debt footer { color: #b03a2a; }
 
 /* ---------- avisos ---------- */
-.hint { position: fixed; bottom: 215px; left: 50%; transform: translateX(-50%); font-size: 15px; }
+.hint { position: fixed; bottom: 215px; left: 50%; transform: translateX(-50%); font-size: 15px; z-index: 65; }
 .toast { position: fixed; top: 88px; left: 50%; transform: translateX(-50%); color: #ffb39c; font-size: 16px; z-index: 80; }
 .news { position: fixed; top: 88px; left: 50%; transform: translateX(-50%); font-size: 15px; z-index: 80; animation: fade 3.5s forwards; }
 @keyframes fade { 80% { opacity: 1; } 100% { opacity: 0; } }
@@ -242,7 +242,7 @@ button { font: inherit; cursor: pointer; }
 .sprite > span { display: block; background-repeat: no-repeat; image-rendering: pixelated; filter: drop-shadow(0 2px 0 #0006); }
 
 /* Contrato: prazo em destaque no canto da arte; dois botões lado a lado. */
-.pcard .art { position: relative; }
+.pcard .art { position: relative; overflow: hidden; }
 .timer {
   position: absolute; top: 4px; right: 4px; padding: 2px 6px; font-size: 14px; color: #fff4dc;
   background: #2a1a10d0; border: 2px solid #b4915c; text-shadow: var(--outline);
@@ -275,8 +275,8 @@ button { font: inherit; cursor: pointer; }
    Retrato ou paisagem baixa: barra rolável no topo, cartões recolhidos à esquerda, botões redondos à direita,
    mão de cartas rolável no rodapé sem leque, painéis viram folhas de baixo. Seletores do tutorial preservados. */
 @media (max-width: 820px), (max-height: 520px) {
-  .bar { left: 0; right: 0; top: 0; width: auto; margin: 0; transform: none; max-width: none; flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; padding: 4px 6px; gap: 0; scrollbar-width: none; }
-  .bar::-webkit-scrollbar { display: none; }
+  /* Barra quebra em linhas (rolagem escondia recursos); o resto do HUD desce junto via --bar-h (medido no App). */
+  .bar { left: 0; right: 0; top: 0; width: auto; margin: 0; transform: none; max-width: none; flex-wrap: wrap; justify-content: center; padding: 4px 6px; gap: 2px 0; }
   .stat { padding: 0 5px; gap: 3px; }
   .stat b { font-size: 15px; }
   .stat small { font-size: 11px; }
@@ -290,16 +290,18 @@ button { font: inherit; cursor: pointer; }
   .hp i { width: 60px; }
   .endturn { font-size: 18px; padding: 10px 16px; }
 
-  .side { top: 50px; left: 6px; width: 150px; gap: 6px; }
+  .side { top: calc(var(--bar-h, 44px) + 6px); left: 6px; width: 150px; gap: 6px; }
   .side .pcard header { font-size: 13px; margin: 4px; padding: 3px; cursor: pointer; }
   .side .pcard header::after { content: ' ▾'; }
   .side.open .pcard header::after { content: ' ▴'; }
   .side:not(.open) .pcard > :not(header) { display: none; }
   .side:not(.open) .pcard { padding-bottom: 0; }
   .side .pcard .art { height: 44px; }
+  .side .pcard .art .sprite { transform: scale(0.6); margin: -13px; } /* 70px → 42px; margem tira o espaço que sobrou */
   .side .optrow { flex-direction: column; }
+  .side .pcard .goal { font-size: 12px; flex-wrap: wrap; }
 
-  .right { top: 50px; right: 6px; gap: 8px; }
+  .right { top: calc(var(--bar-h, 44px) + 6px); right: 6px; gap: 8px; }
   .minimap { display: none; }
   .roundbtns { margin-right: 0; gap: 6px; }
   .round { width: 46px; height: 46px; }
@@ -326,11 +328,12 @@ button { font: inherit; cursor: pointer; }
   .card p { font-size: 10px; }
   .card .art { height: 50px; }
 
-  .hint { top: 96px; bottom: auto; left: 6px; right: 62px; transform: none; font-size: 13px; z-index: 61; }
-  .toast, .news { top: 50px; left: 165px; right: 62px; transform: none; font-size: 13px; }
+  .hint { top: calc(var(--bar-h, 44px) + 52px); bottom: auto; left: 6px; right: 62px; transform: none; font-size: 13px; z-index: 61; }
+  .toast, .news { top: calc(var(--bar-h, 44px) + 6px); left: 165px; right: 62px; transform: none; font-size: 13px; }
   .stage .pcard { width: min(300px, 92vw); }
   .pcard.big { width: min(360px, 92vw); }
   .coach { left: 6px; right: 6px; width: auto; bottom: 168px; }
+  .coach.up { top: calc(var(--bar-h, 44px) + 6px); bottom: auto; }
 }
 
 /* Toque não tem hover: a carta só sobe quando selecionada. */
