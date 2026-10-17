@@ -138,4 +138,18 @@ Mudanças:
 
 Resumo das 8 rodadas: vitória 0% → 67%, derrota 92% → 3%, campanha em ~290 turnos (alvo 250–350). Os 30% restantes ficam sem tempo, sobretudo na Contemporânea (Cidade Inteligente e 160 👤).
 
+## Rodada 9 — ajuda de crise (2026-10-17, 100 partidas)
+**Mudança:** nova regra de ajuda de crise (uma por era: Centro sob ataque, fome ou evento sem saída), paga com 💰 com ágio de 25% ou com anúncio. O robô compra a ajuda com 💰 assim que ela aparece e ele tem o dinheiro (antes do bloco de evento). Sem calibragem: preço do Centro (`60 × era`) e `AID_MARKUP` (1,25) ficaram como estavam.
+Obs.: o "antes" foi remedido nesta rodada (o código mudou desde a Rodada 8: desafio, revolta e eventos que escalam com a era), por isso 40% e não 67%.
+
+| | Antes (sem ajuda) | Rodada 9 (com ajuda) |
+|---|---|---|
+| Vitórias | 40% (309 t) | **31% (301 t)** |
+| Derrotas | 54% (revolta 52, Centro 2) | **60%** (revolta 58, Centro 2) |
+| Tempo esgotado | 6% | 9% |
+| Chegam à Contemporânea | 56% | 46% |
+| Ajudas por partida | 0 | **4,3 (mediana 4)** |
+
+Leitura: o robô gasta 💰 (com ágio) em ajudas que um jogador esperto poderia guardar, e a derrota principal (revolta) não é coberta pela ajuda; a diferença de 9 pontos está dentro do ruído de 100 partidas com robô simples. A ajuda não deixa o jogo fácil (vitória bem abaixo de 75%, mediana ~300 turnos, dentro do alvo 250–350). O modo versus não usa ajuda (0 por partida).
+
 Ver [[Vertical Slice]] · [[Roadmap]].
