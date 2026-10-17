@@ -41,6 +41,7 @@ export type State = {
   contracts: Contract[] // contratos aceitos
   rep: number // ⭐ reputação
   pollution: number // ☁️ 0–100
+  unrest?: number // turnos seguidos com 😊 em 0; em REVOLT_TURNS o povo derruba o governo
   opts?: Sandbox // Sandbox ou partida online
   match?: MatchInfo // só em partida online
   troops: number // tropas em casa (Tasks 3 e 4)
@@ -551,6 +552,16 @@ function draw(s: State): string | null {
   return null
 }
 
+// Recursos dos eventos crescem com a era (as cartas são da Primitiva: −5 🪵 não pesa no Industrial).
+const EVENT_SCALE = [1, 2, 3, 4, 6, 8, 10]
+export const REVOLT_TURNS = 5
+const eventRes = (s: State, e: Effect) =>
+  Object.fromEntries(Object.entries(e.res ?? {}).map(([r, v]) => [r, v! * EVENT_SCALE[s.era]])) as Bag
+
+// Texto da opção com os números de recurso já escalados ("−5 🪵" → "−40 🪵"); ✋, 😊, 👤 não mudam.
+const RES_NUM = new RegExp(`(\\d+) (${Object.values(RES).map(d => d.icon).join('|')})`, 'gu')
+export const eventText = (s: State, text: string) => text.replace(RES_NUM, (_, n, icon) => `${Number(n) * EVENT_SCALE[s.era]} ${icon}`)
+
 export function canChoose(s: State, o: EventOption): string | null {
   if (o.requires && count(s, o.requires) === 0) return tr('Requer {0}', BUILDINGS[o.requires].name)
   const e = o.effect
@@ -598,7 +609,7 @@ export function resolveEvent(prev: State, i: number): State {
   const err = canChoose(prev, o)
   if (err) throw new Error(err)
   const s = structuredClone(prev)
-  applyEffect(s, o.effect, card.title)
+  applyEffect(s, { ...o.effect, res: eventRes(prev, o.effect) }, card.title)
   if (card.once) s.flags.push(`done:${card.id}`)
   s.event = null
   log(s, `${card.title}: ${o.label}.`)
@@ -885,6 +896,13 @@ export function endTurn(prev: State): State {
 
   // ✋ que sobram passam para o próximo turno, até o dobro do máximo (junta ações para obras grandes).
   s.actions = Math.min(2 * maxActions(s), prev.actions + maxActions(s))
+
+  // Revolta: 😊 em 0 por REVOLT_TURNS turnos seguidos é derrota (dívida e poluição levam até lá).
+  s.unrest = happiness(s) === 0 ? (s.unrest ?? 0) + 1 : 0
+  if (s.unrest >= REVOLT_TURNS) {
+    s.over = 'lost'
+    log(s, tr('Revolta! O povo derrubou o governo.'))
+  } else if (s.unrest) log(s, tr(REVOLT_TURNS - s.unrest === 1 ? '⚠️ Revolta no próximo turno se a 😊 seguir em 0!' : '⚠️ Revolta em {0} turnos se a 😊 seguir em 0.', REVOLT_TURNS - s.unrest))
   if (s.pop <= 0 || s.centerHp <= 0) s.over = 'lost'
   return s
 }

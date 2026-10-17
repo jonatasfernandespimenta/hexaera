@@ -134,7 +134,7 @@ export const STEPS: Step[] = [
   },
   {
     title: 'Pronto!',
-    text: 'Vença concluindo o Marco Final da Era Contemporânea. Se o ❤️ do Centro ou a 👤 população zerar, a partida acaba. Boa sorte!',
+    text: 'Vença concluindo o Marco Final da Era Contemporânea. Se o ❤️ do Centro ou a 👤 população zerar, ou a 😊 ficar em 0 por 5 turnos (revolta), a partida acaba. Eventos cobram mais a cada era e podem deixar dívida. Boa sorte!',
   },
 ]
 

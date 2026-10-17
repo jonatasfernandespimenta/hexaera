@@ -231,6 +231,6 @@ export function playGame(seed: number, maxTurns = 500, start?: State): Report {
   }
   return {
     seed, outcome: s.over ?? 'timeout', turns: s.turn, eraTurn, waiting, pop: s.pop, debtTurns,
-    cause: s.over === 'lost' ? (s.centerHp <= 0 ? 'Centro destruído' : 'população zerou') : undefined,
+    cause: s.over === 'lost' ? (s.centerHp <= 0 ? 'Centro destruído' : s.pop <= 0 ? 'população zerou' : 'revolta') : undefined,
   }
 }

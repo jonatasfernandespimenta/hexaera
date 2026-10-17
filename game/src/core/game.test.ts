@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
 import {
-  abandon, accept, advanceEra, build, buildRail, buildTurns, railPath, decline, demolish, eraGoals, housing, idle, keepPlaying, maxActions, buildLink, deliver, endTurn, hunt, offGrid, staffed, stopped, trade, linkCost, run, pollutionDelta, explore, exploreCost, happiness, hiddenHexes, newGame, production, resolveEvent, terrainAt,
+  abandon, accept, advanceEra, build, buildRail, buildTurns, railPath, decline, demolish, eraGoals, housing, idle, keepPlaying, maxActions, buildLink, deliver, endTurn, hunt, offGrid, staffed, stopped, trade, linkCost, run, pollutionDelta, explore, exploreCost, happiness, hiddenHexes, newGame, production, resolveEvent, terrainAt, eventText, REVOLT_TURNS,
   type State,
 } from './game'
 import { neighbors, parse } from './hex'
@@ -331,4 +331,31 @@ test('buildTurns: metade (para cima) no ritmo rápido', async () => {
   const slow = newGame(1), fast = newMatchGame(1, 'coop', 0, true)
   expect(buildTurns(slow, 'mechfarm')).toBe(2)
   expect(buildTurns(fast, 'mechfarm')).toBe(1)
+})
+
+test('eventos: recursos escalam com a era e podem negativar o estoque', () => {
+  let s = newGame()
+  s.era = 4 // ×6
+  s.event = 'tempestade' // Reforçar: −3 🪵
+  s.res.wood = 10
+  s = resolveEvent(s, 0)
+  expect(s.res.wood).toBe(-8)
+  expect(eventText(s, '−2 ✋, +6 🍖 e 😊 +5')).toBe('−2 ✋, +36 🍖 e 😊 +5')
+})
+
+test('revolta: 😊 em 0 por REVOLT_TURNS seguidos é derrota; sair do 0 zera a contagem', () => {
+  let s = newGame()
+  s.res.food = 999
+  s.mods.push({ label: 'teste', turns: 99, happy: -100 })
+  s = endTurn(s); s.event = null
+  expect(s.unrest).toBe(1)
+  s = endTurn(s); s.event = null
+  expect(s.over).toBeNull()
+  s.mods = []
+  s = endTurn(s); s.event = null
+  expect(s.unrest).toBe(0)
+  s.mods.push({ label: 'teste', turns: 99, happy: -100 })
+  for (let i = 0; i < REVOLT_TURNS; i++) { s = endTurn(s); s.event = null }
+  expect(s.over).toBe('lost')
+  expect(s.log[0]).toMatch('Revolta')
 })

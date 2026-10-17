@@ -10,7 +10,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="pt-BR">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link href="https://fonts.googleapis.com/css2?family=Tiny5&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Tiny5&family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet" />
       </head>
       <body>
         <div id="root">{children}</div>

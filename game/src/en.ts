@@ -124,6 +124,9 @@ export const EN: Record<string, string> = {
   '{0} 👤 partiram sem casa.': '{0} 👤 left, homeless.',
   'Requer {0}': 'Requires {0}',
   'Faltam ações': 'Not enough actions',
+  'Revolta! O povo derrubou o governo.': 'Revolt! The people overthrew the government.',
+  '⚠️ Revolta no próximo turno se a 😊 seguir em 0!': '⚠️ Revolt next turn if 😊 stays at 0!',
+  '⚠️ Revolta em {0} turnos se a 😊 seguir em 0.': '⚠️ Revolt in {0} turns if 😊 stays at 0.',
   '⚠️ {0} à vista… ataque no próximo turno!': '⚠️ {0} in sight… attack next turn!',
   '{0} foi destruída.': '{0} was destroyed.',
   'Nenhum evento.': 'No event.',
@@ -272,8 +275,8 @@ export const EN: Record<string, string> = {
     'In versus, reach the Bronze Age and build the War Camp. Recruit troops and click Attack: the army marches on its own and reaches the rival as invaders. Troops at home defend your Center.',
   '{0} jogando agora': '{0} playing now',
   'Pronto!': 'Ready!',
-  'Vença concluindo o Marco Final da Era Contemporânea. Se o ❤️ do Centro ou a 👤 população zerar, a partida acaba. Boa sorte!':
-    'Win by completing the Final Landmark of the Contemporary Age. If the Center ❤️ or 👤 population hits zero, the game ends. Good luck!',
+  'Vença concluindo o Marco Final da Era Contemporânea. Se o ❤️ do Centro ou a 👤 população zerar, ou a 😊 ficar em 0 por 5 turnos (revolta), a partida acaba. Eventos cobram mais a cada era e podem deixar dívida. Boa sorte!':
+    'Win by completing the Final Landmark of the Contemporary Age. If the Center ❤️ or 👤 population hits zero, or 😊 stays at 0 for 5 turns (revolt), the game ends. Events cost more each age and can leave you in debt. Good luck!',
 
   // ---------- multiplayer ----------
   'Campo de guerra': 'War Camp', 'recruta tropas (partida online)': 'recruits troops (online match)',

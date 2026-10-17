@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { BUILDINGS, CONTRACT_EVERY, CONTRACTS, EVENT_EVERY, ERAS, LINKS, RES, TERRAINS, type BuildingId, type Link, type Res } from './core/data'
 import { EVENT_BY_ID } from './core/events'
 import {
-  abandon, accept, advanceEra, buildRail, buildTurns, canPlace, railPath, demolish, DEMOLISH_COST, SANDBOX_DEFAULT, type Sandbox, keepPlaying, terrainsOf, decline, DECLINE_COST, affordable, build, buildLink, canChoose, centerMax, contractReward, debt, deliver, endTurn, eraGoals,
+  abandon, accept, advanceEra, buildRail, buildTurns, canPlace, railPath, demolish, DEMOLISH_COST, SANDBOX_DEFAULT, type Sandbox, keepPlaying, terrainsOf, decline, DECLINE_COST, affordable, build, buildLink, canChoose, centerMax, eventText, contractReward, debt, deliver, endTurn, eraGoals,
   explore, happiness, pollutionDelta, run, terrainAt, housing, hunt, idle, income, maxActions, maxContracts, newGame, resolveEvent, shortfall, type State,
 } from './core/game'
 import { normalize } from './core/match'
@@ -372,7 +372,7 @@ export function App() {
           : setup ? <SandboxSetup value={setup} onChange={setSetup} onBack={() => setSetup(null)}
             onStart={() => { play(newGame(undefined, setup), 'sandbox'); setSetup(null) }} /> : <div className="pcard menu">
             {save && <button className="opt green" onClick={() => play(save, 'continue')}><b>{t('Continuar')}</b><span>{t('Era {0} · turno {1}', ERAS[save.era].name, save.turn)}</span></button>}
-            <button className={`opt ${save || fresh ? 'dark' : 'green'}`} onClick={() => play(newGame(), 'new')}><b>{t('Nova civilização')}</b>{save && <span>{t('substitui o jogo salvo')}</span>}</button>
+            <button className={`opt ${save || fresh ? 'dark' : 'green'}`} onClick={fresh ? startTutorial : () => play(newGame(), 'new')}><b>{t('Nova civilização')}</b>{save && <span>{t('substitui o jogo salvo')}</span>}</button>
             <button className={`opt ${fresh ? 'green' : 'dark'}`} onClick={startTutorial}><b>{t('Tutorial')}</b><span>{t(fresh ? 'recomendado · 2 minutos' : 'rever as mecânicas')}</span></button>
             <button className="opt dark" onClick={() => { sfx('card'); setScreen('online') }}><b>{t('Jogar online')}</b><span>{t('coop ou versus com um amigo')}</span></button>
             <button className="opt dark" onClick={() => { sfx('card'); setSetup(SANDBOX_DEFAULT) }}><b>Sandbox</b><span>{t('sem objetivo · você ajusta o mundo')}</span></button>
@@ -393,7 +393,7 @@ export function App() {
       <div ref={trackBarHeight} className={`bar frame ${shown.length > 12 ? 'dense' : ''}`}>
         <Stat icon={<Sprite name="hand" size={28} />} value={`${state.actions}/${maxActions(state)}`} title={t('Ações por turno: 3 do Centro + {0} 👤 ociosos + estábulos/moinhos. As que sobram passam para o próximo turno (até {1}), para juntar em obras grandes.', idle(state), 2 * maxActions(state))} />
         <Stat icon={<Sprite name="people" size={30} />} value={`${state.pop}/${housing(state)}`} title={t('População / moradia')} />
-        <Stat icon={<Sprite name="smile" size={28} />} value={happy} cls={happy < 30 ? 'neg' : happy >= 75 ? 'pos' : ''}
+        <Stat icon={<Sprite name="smile" size={28} />} value={happy} cls={state.unrest ? 'neg alarm' : happy < 30 ? 'neg' : happy >= 75 ? 'pos' : ''}
           title={t('Felicidade (abaixo de 30 reduz a produção; 75+ dá 📚)') + (debt(state) ? t(' · dívida: −{0}', 2 * debt(state)) : '')} />
         {state.era >= 4 && <Stat icon={<Sprite name="bolt" size={26} />} value={`${power.used}/${power.supply}`}
           title={t('Energia ⚡: usada / gerada neste turno (não acumula). Usinas a carvão geram; Siderúrgica e Fábrica consomem.')} />}
@@ -503,7 +503,7 @@ export function App() {
               return (
                 <button key={i} className={`opt ${i === 0 ? 'green' : 'dark'}`} disabled={!!err} onClick={() => act(() => resolveEvent(state, i), 'click', ['event_choice', { event: state.event, option: i, auto: false }])}>
                   <b><Icons text={(o.requires ? (err ? '🔒 ' : '🔓 ') : '') + o.label} /></b>
-                  <span><Icons text={err ?? o.text} /></span>
+                  <span><Icons text={err ?? eventText(state, o.text)} /></span>
                 </button>
               )
             })}
@@ -619,6 +619,7 @@ export function App() {
               <>
                 <h2>{t('A fogueira se apagou')}</h2>
                 <p>{t('Sua tribo sobreviveu {0} turnos.', state.turn)}</p>
+                {state.log[0] && <p className="muted"><Icons text={state.log[0]} /></p>}
               </>
             )}
             <button className="opt green" onClick={() => play(newGame(), 'replay')}><b>{t('Nova civilização')}</b></button>

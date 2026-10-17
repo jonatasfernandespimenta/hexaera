@@ -15,7 +15,7 @@
 }
 * { box-sizing: border-box; }
 html, body, #root { margin: 0; height: 100%; background: #1a0f08; overflow: hidden; }
-body { font-family: 'Tiny5', monospace; color: #f4e6c4; user-select: none; }
+body { font-family: 'Pixelify Sans', monospace; color: #f4e6c4; user-select: none; }
 canvas { display: block; }
 button { font: inherit; cursor: pointer; }
 .pos { color: #8ee36a; }
@@ -380,6 +380,7 @@ button { font: inherit; cursor: pointer; }
 .setrow > .field { width: 100%; box-sizing: border-box; }
 .lobbywait { text-align: center !important; animation: pulse-text 1.4s ease-in-out infinite; }
 @keyframes pulse-text { 50% { opacity: 0.5; } }
+.stat b.alarm { animation: pulse-text 0.8s ease-in-out infinite; }
 .pcard .lobbyerr { color: #a3261b; font-weight: bold; text-align: center; }
 
 /* partida online: rival e relógio na caixa do turno, painel militar */
@@ -401,3 +402,6 @@ button { font: inherit; cursor: pointer; }
 }
 .title > p.nowplaying { margin: -18px 0 18px; font-size: 14px; opacity: 0.85; }
 .nowplaying::first-letter { color: #8ee36a; }
+
+/* Tiny5 só em títulos e números grandes; texto corrido usa Pixelify Sans (legível em tamanho pequeno). */
+.title h1, .pcard header, .stat b, .turnbox b, .endturn, .stage .pcard h4 { font-family: 'Tiny5', monospace; }
