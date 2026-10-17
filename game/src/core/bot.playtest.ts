@@ -18,6 +18,7 @@ const run = (title: string, play: (i: number) => Report) => test(`${title}: ${N}
   for (const g of lost) causes[g.cause!] = (causes[g.cause!] ?? 0) + 1
   if (lost.length) out.push(`Derrotas: ${Object.entries(causes).map(([c, n]) => `${c} ${n}`).join(' · ')} · turno mediano ${median(lost.map(g => g.turns))}`)
   out.push(`Turnos em dívida (mediana por partida): ${median(games.map(g => g.debtTurns))}`)
+  out.push(`Ajudas de crise por partida: média ${(games.reduce((a, g) => a + g.aids, 0) / N).toFixed(2)} · mediana ${median(games.map(g => g.aids))}`)
   out.push('')
   out.push('Era            chegaram  turno de entrada (mediana)  duração (mediana)  gargalo (turnos esperando, mediana)')
   ERAS.forEach((e, i) => {
