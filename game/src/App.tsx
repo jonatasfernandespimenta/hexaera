@@ -26,7 +26,7 @@ import { getCreds } from './net'
 import { useOnline } from './useOnline'
 import { usePresence } from './usePresence'
 import { context, track } from './track'
-import { adsOn, banner, CRAZY, gameplay, midgame, rewarded } from './ads'
+import { adsOn, banner, CRAZY, gameplay, inviteParam, midgame, rewarded } from './ads'
 
 const sign = (n: number) => (n > 0 ? `+${n}` : `${n}`)
 // Ícone de cada recurso (atlas em public/ui).
@@ -144,8 +144,8 @@ function useMedia(q: string) {
 // Identidade de um fim de partida: o banner do fim só entra depois do midgame dele.
 const overKey = (s: State) => (s.over ? `${s.seed}:${s.turn}:${s.over}` : null)
 
-const URL_MATCH = () => new URLSearchParams(location.search).get('match')
-const clearUrl = () => history.replaceState(null, '', location.pathname)
+const URL_MATCH = () => inviteParam()
+const clearUrl = () => { if (!CRAZY) history.replaceState(null, '', location.pathname) }
 
 export function App() {
   const [solo, setSolo] = useState<State>(() => TEST ? testGame() : loadSave() ?? newGame())
