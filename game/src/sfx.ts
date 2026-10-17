@@ -4,7 +4,14 @@
 let ctx: AudioContext | null = null
 let muted = (() => { try { return localStorage.getItem('hex.mute') === '1' } catch { return false } })()
 
+let paused = false // pausa temporária (anúncio / mute do CrazyGames); não mexe em hex.mute
 export const isMuted = () => muted
+export function pauseAudio(p: boolean) {
+  paused = p
+  if (!ctx) return
+  if (p) ctx.suspend()
+  else if (!muted) ctx.resume()
+}
 export function setMuted(m: boolean) {
   muted = m
   try { localStorage.setItem('hex.mute', m ? '1' : '0') } catch {}
@@ -16,7 +23,7 @@ type Wave = OscillatorType | 'noise'
 type Note = [Wave, number, number, number, number, number?]
 
 function play(notes: Note[]) {
-  if (muted) return
+  if (muted || paused) return
   ctx ??= new AudioContext()
   if (ctx.state === 'suspended') ctx.resume()
   const t0 = ctx.currentTime
@@ -173,7 +180,8 @@ function every(min: number, max: number, fn: () => void) {
 export function startAmbience() {
   if (bed) return
   ctx ??= new AudioContext()
-  if (ctx.state === 'suspended') ctx.resume()
+  if (paused) ctx.suspend()
+  else if (ctx.state === 'suspended') ctx.resume()
   bed = ctx.createGain()
   bed.gain.value = 0
   bed.gain.setTargetAtTime(muted ? 0 : 1, ctx.currentTime, 1.5) // entra devagar
