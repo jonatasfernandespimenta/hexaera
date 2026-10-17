@@ -47,6 +47,7 @@ export type State = {
   troops: number // tropas em casa (Tasks 3 e 4)
   away: { n: number; back: number }[] // tropas em missão e turno de retorno
   raids: { at: string; kind: number; n: number }[] // ataques anunciados
+  aidEra?: number // era em que a ajuda de crise já foi usada (saves antigos não têm)
 }
 
 // Sandbox (ver vault: Sandbox): sem objetivo obrigatório; o jogador ajusta o mundo.
@@ -553,9 +554,9 @@ function draw(s: State): string | null {
 }
 
 // Recursos dos eventos crescem com a era (as cartas são da Primitiva: −5 🪵 não pesa no Industrial).
-const EVENT_SCALE = [1, 2, 3, 4, 6, 8, 10]
+export const EVENT_SCALE = [1, 2, 3, 4, 6, 8, 10]
 export const REVOLT_TURNS = 5
-const eventRes = (s: State, e: Effect) =>
+export const eventRes = (s: State, e: Effect) =>
   Object.fromEntries(Object.entries(e.res ?? {}).map(([r, v]) => [r, v! * EVENT_SCALE[s.era]])) as Bag
 
 // Texto da opção com os números de recurso já escalados ("−5 🪵" → "−40 🪵"); ✋, 😊, 👤 não mudam.
@@ -589,7 +590,7 @@ function destroyRandom(s: State) {
   delete s.tiles[k].building
 }
 
-function applyEffect(s: State, e: Effect, label: string) {
+export function applyEffect(s: State, e: Effect, label: string) {
   for (const [r, v] of Object.entries(e.res ?? {}) as [Res, number][]) s.res[r] += v
   if (e.actions) s.actions += e.actions
   if (e.pop) s.pop = Math.max(0, Math.min(housing(s), s.pop + e.pop))
