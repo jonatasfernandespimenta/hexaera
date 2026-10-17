@@ -1,18 +1,19 @@
 import { RES, type Res } from './core/data'
 
 // Ícones e artes das folhas em public/ui. Regiões [x, y, w, h, folha] em pixels da folha (folha 0 se omitida).
+// Caminhos relativos (sem '/'): o build do CrazyGames é servido de uma subpasta
 const SHEETS = [
-  { url: '/ui/atlas.png', w: 1448, h: 1086 },
-  { url: '/ui/atlas2.png', w: 1448, h: 1086 }, // barreiro, olaria, ancião, totem
-  { url: '/ui/atlas3.png', w: 2000, h: 667 }, // livros, população
-  { url: '/ui/atlas4.png', w: 1254, h: 1254 }, // construções Bronze→Industrial, recursos
-  { url: '/ui/atlas5.png', w: 1254, h: 1254 }, // interface, conexões, casas, plantações
-  { url: '/ui/atlas6.png', w: 1254, h: 1254 }, // Contemporânea + recursos modernos
-  { url: '/ui/atlas7.png', w: 1254, h: 1254 }, // comida por era, Moderna, Rodovia
-  { url: '/ui/atlas8.png', w: 1254, h: 1254 }, // ilustrações de eventos, ícones de ameaças
-  { url: '/ui/atlas9.png', w: 1536, h: 1024 }, // relógio, proibido, fogo, cadeado, escudo
-  { url: '/ui/atlas10.png', w: 1254, h: 1254 }, // setas, ok/x, som, idioma
-  { url: '/ui/atlas11.png', w: 2000, h: 667 }, // dedo, alerta, aperto de mão, bandeira branca
+  { url: 'ui/atlas.png', w: 1448, h: 1086 },
+  { url: 'ui/atlas2.png', w: 1448, h: 1086 }, // barreiro, olaria, ancião, totem
+  { url: 'ui/atlas3.png', w: 2000, h: 667 }, // livros, população
+  { url: 'ui/atlas4.png', w: 1254, h: 1254 }, // construções Bronze→Industrial, recursos
+  { url: 'ui/atlas5.png', w: 1254, h: 1254 }, // interface, conexões, casas, plantações
+  { url: 'ui/atlas6.png', w: 1254, h: 1254 }, // Contemporânea + recursos modernos
+  { url: 'ui/atlas7.png', w: 1254, h: 1254 }, // comida por era, Moderna, Rodovia
+  { url: 'ui/atlas8.png', w: 1254, h: 1254 }, // ilustrações de eventos, ícones de ameaças
+  { url: 'ui/atlas9.png', w: 1536, h: 1024 }, // relógio, proibido, fogo, cadeado, escudo
+  { url: 'ui/atlas10.png', w: 1254, h: 1254 }, // setas, ok/x, som, idioma
+  { url: 'ui/atlas11.png', w: 2000, h: 667 }, // dedo, alerta, aperto de mão, bandeira branca
 ]
 
 export const SPRITES = {

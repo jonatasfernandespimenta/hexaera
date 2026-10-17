@@ -138,4 +138,20 @@ Mudanças:
 
 Resumo das 8 rodadas: vitória 0% → 67%, derrota 92% → 3%, campanha em ~290 turnos (alvo 250–350). Os 30% restantes ficam sem tempo, sobretudo na Contemporânea (Cidade Inteligente e 160 👤).
 
+## Rodada 9 — ajuda de crise (2026-10-17, 100 + 200 partidas)
+**Mudança:** nova regra de ajuda de crise (uma por era: Centro sob ataque, fome ou evento sem saída), paga com 💰 com ágio de 25% ou com anúncio. O robô compra a ajuda com 💰 assim que ela aparece e ele tem o dinheiro (antes do bloco de evento). Sem calibragem: preço do Centro (`60 × era`) e `AID_MARKUP` (1,25) ficaram como estavam.
+Obs.: o "antes" foi remedido nesta rodada (o código mudou desde a Rodada 8: desafio, revolta e eventos que escalam com a era), por isso 40% e não 67%.
+
+| | Antes (sem ajuda, N=100) | Rodada 9 (com ajuda, N=100) | Rodada 9b (com ajuda, N=200) |
+|---|---|---|---|
+| Vitórias | 40% (309 t) | 31% (301 t) | **35% (284 t)** |
+| Derrotas | 54% (revolta 52, Centro 2) | 60% (revolta 58, Centro 2) | **54%** (revolta 104, Centro 4) |
+| Tempo esgotado | 6% | 9% | 11% |
+| Chegam à Contemporânea | 56% | 46% | **49%** |
+| Ajudas por partida | 0 | 4,3 (mediana 4) | **4,04 (mediana 4)** |
+
+**9b:** remedido com `N=200` depois do ajuste "ajuda adOnly": quando tudo o que a metade economiza é 💰 (ex.: *Limpar o rio* no Industrial: pagar 225 💰 para economizar 180 💰), a ajuda passa a ser só por anúncio e o robô não a compra mais. Versus segue sem ajuda (0 por partida).
+
+Leitura honesta: a queda 40%→31% da Rodada 9 era ~1,3σ com 100 partidas de cada lado (não dava para chamar de ruído nem de efeito). Com 200 partidas a ajuda fica em 35% de vitória (±3,4 pts de erro-padrão): 5 pts abaixo do "antes", ~0,8σ — compatível com nenhum efeito, mas também com uma piora pequena. "Chegam à Contemporânea" cai de 56% para 49% (~1,1σ), na mesma direção. Ou seja: não há evidência de que a ajuda melhore o resultado do robô, e há uma tendência fraca de piora (ele gasta 💰 com ágio em ajudas que um jogador guardaria; a derrota principal, revolta, não é coberta). Para fechar a questão seria preciso remedir o "antes" com N=200 também. A ajuda não deixa o jogo fácil: vitória bem abaixo de 75% e mediana de 284 turnos, dentro do alvo 250–350.
+
 Ver [[Vertical Slice]] · [[Roadmap]].

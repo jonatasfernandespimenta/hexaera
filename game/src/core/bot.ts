@@ -1,6 +1,7 @@
 // Robô de playtest: joga usando só a API pública do jogo, com regras simples de prioridade.
 // Não é para ser ótimo — é um jogador "razoável" que revela onde o ritmo trava (ver vault: Playtest).
 import { BUILDINGS, ERAS, HUNT_COST, LINKS, RES, type BuildingId, type Link, type Res } from './data'
+import { aidOffer, takeAid } from './aid'
 import { EVENT_BY_ID } from './events'
 import {
   accept, advanceEra, buildLink, build, canChoose, canLink, canPlace, count, deliver, endTurn, eraGoals, explore, exploreCost,
@@ -102,6 +103,9 @@ const STOP = {} as State // sinal: encerrar o turno guardando ✋
 
 // Uma decisão por chamada; null = nada útil a fazer neste turno.
 export function step(s: State): State | null {
+  // Ajuda de crise: compra com 💰 quando dá (adOnly não: o bot não vê anúncio) (antes do evento, para a ajuda de evento ter chance).
+  const aid = aidOffer(s)
+  if (aid && !aid.adOnly && s.res.money >= aid.price) return takeAid(s, aid, 'money')
   if (s.event) {
     const opts = EVENT_BY_ID[s.event].options
     const i = opts.findIndex(o => !canChoose(s, o))
@@ -209,6 +213,7 @@ export type Report = {
   cause?: string
   pop: number
   debtTurns: number
+  aids: number // ajudas de crise usadas
 }
 
 export function playGame(seed: number, maxTurns = 500, start?: State): Report {
@@ -216,11 +221,13 @@ export function playGame(seed: number, maxTurns = 500, start?: State): Report {
   const eraTurn = [1]
   const waiting: Record<string, number>[] = ERAS.map(() => ({}))
   let debtTurns = 0
+  let aids = 0
   while (!s.over && s.turn <= maxTurns && !(s.match && s.era === ERAS.length - 1)) { // partida online: mede só até a última era
     for (let n = 0; n < 40; n++) {
       const next = step(s)
       if (!next) break
       if (next.era > s.era) eraTurn[next.era] = s.turn
+      if (next.aidEra !== s.aidEra) aids++
       s = next
       if (s.over) break
     }
@@ -230,7 +237,7 @@ export function playGame(seed: number, maxTurns = 500, start?: State): Report {
     s = endTurn(s)
   }
   return {
-    seed, outcome: s.over ?? 'timeout', turns: s.turn, eraTurn, waiting, pop: s.pop, debtTurns,
+    seed, outcome: s.over ?? 'timeout', turns: s.turn, eraTurn, waiting, pop: s.pop, debtTurns, aids,
     cause: s.over === 'lost' ? (s.centerHp <= 0 ? 'Centro destruído' : s.pop <= 0 ? 'população zerou' : 'revolta') : undefined,
   }
 }

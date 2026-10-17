@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { API } from './net'
 
 // Um id por aba, mantido entre recarregamentos (trocar idioma, F5) para não contar a mesma aba duas vezes.
 const ID = (() => {
@@ -16,7 +17,7 @@ export function usePresence() {
   useEffect(() => {
     const ping = () => {
       if (document.visibilityState !== 'visible') return
-      fetch('/api/presence', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: ID }) })
+      fetch(`${API}/api/presence`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: ID }) })
         .then(r => (r.ok ? r.json() : null)).then(d => d && setCount(d.count)).catch(() => {})
     }
     ping()

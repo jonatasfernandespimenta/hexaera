@@ -323,4 +323,11 @@ export const EN: Record<string, string> = {
   'Envios inválidos.': 'Invalid convoys.', 'Comitiva inválida.': 'Invalid convoy.', 'Turno fora de ordem.': 'Turn out of order.',
   'Estado inválido.': 'Invalid state.', 'Estado grande demais.': 'State too large.',
   'Servidor de partidas indisponível.': 'Match server unavailable.',
+  // ajuda de crise e troca de era
+  'Ajuda de crise': 'Crisis aid', 'ajuda de crise': 'crisis aid', 'Ajuda já usada nesta era.': 'Aid already used this era.', 'Esta ajuda é só por anúncio.': 'This aid is ad-only.', 'Convite indisponível agora. Recarregue o jogo.': 'Invite unavailable right now. Reload the game.',
+  '🆘 Ajuda de crise: o Centro foi reforçado.': '🆘 Crisis aid: the Center was reinforced.', '🆘 Ajuda de crise: comida chegou.': '🆘 Crisis aid: food arrived.',
+  'Sua gente vai passar fome': 'Your people will go hungry', 'O Centro está caindo': 'The Center is falling',
+  'Comprar por {0} 💰': 'Buy for {0} 💰', '📺 Assistir': '📺 Watch', 'Pagar metade: {0}': 'Pay half: {0}',
+  'Era {0}': '{0} Age', '🎉 Era {0}!': '🎉 {0} Age!', 'Novas construções': 'New buildings', 'Vídeo indisponível.': 'Video unavailable.',
+  'Usamos métricas anônimas para melhorar o jogo.': 'We use anonymous metrics to improve the game.',
 }

@@ -1,6 +1,7 @@
 // Sala online: criar partida (link para o amigo), entrar por um link ?match= e esperar o segundo jogador.
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Mode } from './core/match'
+import { inviteUrl, CRAZY } from './ads'
 import { create, join, setCreds } from './net'
 import { sfx } from './sfx'
 import { t } from './i18n'
@@ -8,7 +9,6 @@ import { track } from './track'
 import type { OnlinePhase } from './useOnline'
 
 const msg = (e: unknown) => (e instanceof Error ? e.message : t('Erro de conexão.'))
-const matchUrl = (id: string) => `${location.origin}/?match=${id}`
 
 type Props = {
   matchId: string | null // partida com credencial: esperando o rival ou carregando
@@ -27,7 +27,16 @@ export function Lobby({ matchId, joinId, phase, error, onEnter, onBack }: Props)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [link, setLink] = useState<string | null>(null) // null = carregando; '' = sem convite
   const linkRef = useRef<HTMLInputElement>(null)
+
+  // O convite pode vir do SDK (assíncrono)
+  useEffect(() => {
+    if (!matchId) return
+    let live = true
+    inviteUrl(matchId).then(u => { if (live) setLink(u) }, () => {})
+    return () => { live = false }
+  }, [matchId])
 
   const go = async (fn: () => Promise<string>) => {
     if (busy || !name.trim()) return
@@ -38,7 +47,7 @@ export function Lobby({ matchId, joinId, phase, error, onEnter, onBack }: Props)
     const r = await create({ mode, fast, timer, name: name.trim() })
     setCreds(r.id, { seat: r.seat, token: r.token })
     track('match_created', { mode, fast, timer })
-    history.replaceState(null, '', `?match=${r.id}`)
+    if (!CRAZY) history.replaceState(null, '', `?match=${r.id}`)
     return r.id
   })
   const doJoin = (id: string) => go(async () => {
@@ -64,13 +73,15 @@ export function Lobby({ matchId, joinId, phase, error, onEnter, onBack }: Props)
     <div className="pcard menu setup">
       <header className="gold">{t('Jogar online')}</header>
       {phase === 'lobby' ? <>
-        <div className="setrow">
-          <small>{t('Mande este link para o outro jogador')}</small>
-          <div>
-            <input ref={linkRef} className="field" readOnly value={matchUrl(matchId)} onFocus={e => e.target.select()} />
-            <button onClick={() => copy(matchUrl(matchId))}>{t(copied ? 'Copiado!' : 'Copiar')}</button>
+        {link === '' ? <p className="muted">{t('Convite indisponível agora. Recarregue o jogo.')}</p> : (
+          <div className="setrow">
+            <small>{t('Mande este link para o outro jogador')}</small>
+            <div>
+              <input ref={linkRef} className="field" readOnly value={link ?? ''} onFocus={e => e.target.select()} />
+              <button disabled={!link} onClick={() => link && copy(link)}>{t(copied ? 'Copiado!' : 'Copiar')}</button>
+            </div>
           </div>
-        </div>
+        )}
         <p className="lobbywait">{t('Esperando o segundo jogador…')}</p>
       </> : phase !== 'error' && <p className="lobbywait">{t('Conectando…')}</p>}
       {alert}

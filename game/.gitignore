@@ -1,2 +1,4 @@
 .vercel
 .env*
+out/
+hexaera-crazygames.zip

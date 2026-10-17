@@ -36,8 +36,9 @@ function windy(amp: number) {
 const MATERIALS = { none: voxMaterial, grass: windy(0.22), breeze: windy(0.045) }
 export type Sway = keyof typeof MATERIALS
 
+// Caminho relativo (sem '/'): o build do CrazyGames é servido de uma subpasta
 function load() {
-  loading ??= new VOXLoader().loadAsync('/models/Models.vox').then((r: any) => { chunks = r.chunks })
+  loading ??= new VOXLoader().loadAsync('models/Models.vox').then((r: any) => { chunks = r.chunks })
   return loading
 }
 
