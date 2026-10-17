@@ -184,7 +184,7 @@ export function App() {
   const [skipAid, setSkipAid] = useState<number | null>(null) // turno em que a ajuda foi recusada
   const [adBusy, setAdBusy] = useState(false) // anúncio em andamento: o gameplay volta quando ele acaba
   const [overAd, setOverAd] = useState<string | null>(null) // fim de partida cujo midgame já passou
-  const wide = useMedia('(min-width: 1100px)')
+  const wide = useMedia('(min-width: 1100px) and (min-height: 720px)') // 160×600 cabe entre o topo e o banner do rodapé
   // Oferta de fome/Centro: fora do tutorial, sem evento aberto nem celebração na tela.
   const offer = tut === null ? aidOffer(state) : null
   const aidShown: Aid | null = offer && offer.kind !== 'event' && !state.event && eraUp === null && skipAid !== state.turn ? offer : null
@@ -245,7 +245,7 @@ export function App() {
     const p = prev.current
     prev.current = state
     if (p === state || state.turn < p.turn) return // nova partida
-    if (state.over && !p.over && p.seed === state.seed) { const k = overKey(state); withAd(midgame).then(() => setOverAd(k)) } // fim de partida
+    if (state.over && !p.over && p.seed === state.seed && tut === null) { const k = overKey(state); withAd(midgame).then(() => setOverAd(k)) } // fim de partida
     if (p.seed === state.seed && !TEST) { // mesma partida (continuar um save troca a seed)
       if (state.turn > p.turn) {
         context({ turn: state.turn, era: state.era })
