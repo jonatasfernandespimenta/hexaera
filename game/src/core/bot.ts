@@ -103,9 +103,9 @@ const STOP = {} as State // sinal: encerrar o turno guardando ✋
 
 // Uma decisão por chamada; null = nada útil a fazer neste turno.
 export function step(s: State): State | null {
-  // Ajuda de crise: compra com 💰 quando dá (antes do evento, para a ajuda de evento ter chance).
+  // Ajuda de crise: compra com 💰 quando dá (adOnly não: o bot não vê anúncio) (antes do evento, para a ajuda de evento ter chance).
   const aid = aidOffer(s)
-  if (aid && s.res.money >= aid.price) return takeAid(s, aid, 'money')
+  if (aid && !aid.adOnly && s.res.money >= aid.price) return takeAid(s, aid, 'money')
   if (s.event) {
     const opts = EVENT_BY_ID[s.event].options
     const i = opts.findIndex(o => !canChoose(s, o))

@@ -6,7 +6,8 @@ import { t as tr } from '../i18n'
 
 // Ajuda de crise: uma por era, paga com 💰 (com ágio) ou com um anúncio.
 export type AidKind = 'center' | 'food' | 'event'
-export type Aid = { kind: AidKind; price: number; food?: number; hp?: number; actions?: number; option?: number }
+// adOnly: a metade economiza só 💰 (pagar com 💰 seria prejuízo); só por anúncio.
+export type Aid = { kind: AidKind; price: number; food?: number; hp?: number; actions?: number; option?: number; adOnly?: boolean }
 
 export const AID_MARKUP = 1.25
 
@@ -50,11 +51,15 @@ export function aidOffer(s: State): Aid | null {
     if (!best || cost < best.cost) best = { i, cost, save }
   })
   const b = best as { i: number; save: number } | null
-  return b && { kind: 'event', option: b.i, price: Math.ceil(b.save * AID_MARKUP) }
+  if (!b) return null
+  const aid: Aid = { kind: 'event', option: b.i, price: Math.ceil(b.save * AID_MARKUP) }
+  if (costs(s, card.options[b.i].effect).every(([r]) => r === 'money')) aid.adOnly = true
+  return aid
 }
 
 export function takeAid(prev: State, aid: Aid, pay: 'money' | 'ad'): State {
   if (prev.aidEra === prev.era) throw new Error(tr('Ajuda já usada nesta era.'))
+  if (pay === 'money' && aid.adOnly) throw new Error(tr('Esta ajuda é só por anúncio.'))
   if (pay === 'money' && prev.res.money < aid.price) throw new Error(tr('Falta 💰.'))
   const s = structuredClone(prev)
   if (pay === 'money') s.res.money -= aid.price

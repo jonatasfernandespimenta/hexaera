@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest'
 import { AID_MARKUP, aidOffer, takeAid } from './aid'
+import { step } from './bot'
 import { buyPrice, income, newGame, type State } from './game'
 
 // Era 1, pop alto e sem comida: fome projetada.
@@ -98,4 +99,37 @@ test('takeAid sem 💰', () => {
   const s = hungry()
   s.res.money = 0
   expect(() => takeAid(s, aidOffer(s)!, 'money')).toThrow()
+})
+
+// Industrial, poluição alta, 'Rio contaminado' na mesa: a metade economiza só 💰.
+const dirty = () => {
+  const s = withEvent('rio_sujo')
+  s.era = 4
+  s.pollution = 50
+  s.res.money = 10000
+  return s
+}
+
+test('evento só com custo em 💰: oferta só por anúncio', () => {
+  const a = aidOffer(dirty())!
+  expect(a.kind).toBe('event')
+  expect(a.option).toBe(0)
+  expect(a.adOnly).toBe(true)
+  expect(aidOffer(withEvent('tempestade'))!.adOnly).toBeFalsy()
+  expect(aidOffer(hungry())!.adOnly).toBeFalsy()
+})
+
+test('adOnly não aceita 💰, só anúncio', () => {
+  const s = dirty()
+  const a = aidOffer(s)!
+  expect(() => takeAid(s, a, 'money')).toThrow()
+  const r = takeAid(s, a, 'ad')
+  expect(r.res.money).toBe(10000 - 180) // 60 × 6 pela metade
+  expect(r.event).toBeNull()
+})
+
+test('bot não compra ajuda adOnly', () => {
+  const s = dirty()
+  const r = step(s)!
+  expect(r.aidEra).toBe(s.aidEra)
 })
