@@ -59,6 +59,7 @@ Jogo de estratégia **por turnos** em **hexágonos**: você começa com uma fogu
 
 ### 07 · Negócio
 - [[Plataformas e Monetização]]
+- [[Lançamento Web e Métricas]] — PostHog, portais, Ko-fi
 
 ### 08 · Roadmap
 - [[Vertical Slice]]

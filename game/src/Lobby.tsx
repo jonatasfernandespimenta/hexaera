@@ -4,6 +4,7 @@ import type { Mode } from './core/match'
 import { create, join, setCreds } from './net'
 import { sfx } from './sfx'
 import { t } from './i18n'
+import { track } from './track'
 import type { OnlinePhase } from './useOnline'
 
 const msg = (e: unknown) => (e instanceof Error ? e.message : t('Erro de conexão.'))
@@ -36,11 +37,13 @@ export function Lobby({ matchId, joinId, phase, error, onEnter, onBack }: Props)
   const doCreate = () => go(async () => {
     const r = await create({ mode, fast, timer, name: name.trim() })
     setCreds(r.id, { seat: r.seat, token: r.token })
+    track('match_created', { mode, fast, timer })
     history.replaceState(null, '', `?match=${r.id}`)
     return r.id
   })
   const doJoin = (id: string) => go(async () => {
     setCreds(id, await join(id, name.trim()))
+    track('match_joined')
     return id
   })
   const copy = async (url: string) => {

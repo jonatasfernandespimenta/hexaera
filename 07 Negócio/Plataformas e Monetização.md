@@ -3,6 +3,9 @@ tags: [negocio]
 ---
 # Plataformas e Monetização
 
+> [!warning] Atualizado
+> Decisão atual: **só navegador, gratuito**. Ver [[Lançamento Web e Métricas]]. O resto desta nota fica como referência.
+
 ## Plataformas
 - **PC** (Steam) — premium.
 - **Celular** — turnos funcionam muito bem no mobile.
