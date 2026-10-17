@@ -26,6 +26,7 @@ import { getCreds } from './net'
 import { useOnline } from './useOnline'
 import { usePresence } from './usePresence'
 import { context, track } from './track'
+import { adsOn, banner, CRAZY, gameplay, midgame, rewarded } from './ads'
 
 const sign = (n: number) => (n > 0 ? `+${n}` : `${n}`)
 // Ícone de cada recurso (atlas em public/ui).
@@ -123,6 +124,26 @@ function testGame(): State {
 }
 
 // Partida online pela URL (?match=id): com credencial entra direto; sem, a sala pede o apelido.
+// Espaço de banner do CrazyGames: pede ao montar, limpa ao desmontar.
+function AdSlot({ id }: { id: string }) {
+  useEffect(() => banner(id), [id])
+  return <div id={id} className="adslot" />
+}
+// Media query reativa (o slot lateral só existe quando cabe).
+function useMedia(q: string) {
+  const [on, setOn] = useState(() => matchMedia(q).matches)
+  useEffect(() => {
+    const m = matchMedia(q)
+    const fn = () => setOn(m.matches)
+    m.addEventListener('change', fn)
+    return () => m.removeEventListener('change', fn)
+  }, [q])
+  return on
+}
+
+// Identidade de um fim de partida: o banner do fim só entra depois do midgame dele.
+const overKey = (s: State) => (s.over ? `${s.seed}:${s.turn}:${s.over}` : null)
+
 const URL_MATCH = () => new URLSearchParams(location.search).get('match')
 const clearUrl = () => history.replaceState(null, '', location.pathname)
 
@@ -161,6 +182,9 @@ export function App() {
   const [look, setLook] = useState(false) // online: câmera na cidade do rival
   const [eraUp, setEraUp] = useState<number | null>(null) // celebração da era (solo)
   const [skipAid, setSkipAid] = useState<number | null>(null) // turno em que a ajuda foi recusada
+  const [adBusy, setAdBusy] = useState(false) // anúncio em andamento: o gameplay volta quando ele acaba
+  const [overAd, setOverAd] = useState<string | null>(null) // fim de partida cujo midgame já passou
+  const wide = useMedia('(min-width: 1100px)')
   // Oferta de fome/Centro: fora do tutorial, sem evento aberto nem celebração na tela.
   const offer = tut === null ? aidOffer(state) : null
   const aidShown: Aid | null = offer && offer.kind !== 'event' && !state.event && eraUp === null && skipAid !== state.turn ? offer : null
@@ -186,6 +210,24 @@ export function App() {
     if (lock) { setToast(lock); sfx('error'); return }
     try { setState(fn()); sfx(s); if (ev) track(...ev) } catch (e) { setToast((e as Error).message); sfx('error') }
   }
+  // Anúncio: marca adBusy enquanto roda (o gameplay é religado pelo efeito quando acaba).
+  function withAd<T>(fn: () => Promise<T>): Promise<T> {
+    setAdBusy(true)
+    return fn().finally(() => setAdBusy(false))
+  }
+  const live = useRef(state)
+  live.current = state
+  // 📺 da ajuda: paga só no adFinished, com o estado de quando o vídeo acaba (a oferta precisa continuar valendo).
+  const watch = (aid: Aid) => adsOn() ? () => {
+    if (adBusy) return
+    withAd(rewarded).then(ok => {
+      if (!ok) { setToast(t('Vídeo indisponível.')); sfx('error'); return }
+      const s = live.current
+      const now = aidOffer(s)
+      if (!now || now.kind !== aid.kind || now.option !== aid.option) return // oferta sumiu no meio do vídeo
+      act(() => takeAid(s, now, 'ad'), 'card', ['aid_taken', { kind: now.kind, pay: 'ad' }])
+    })
+  } : null
   // Comitiva: o estado (tropas/recursos saem) e a lista do turno mudam juntos; ambos passam pela trava.
   const send = (fn: () => { state: State; convoy: Convoy }) => {
     if (lock) { setToast(lock); sfx('error'); return false }
@@ -203,6 +245,7 @@ export function App() {
     const p = prev.current
     prev.current = state
     if (p === state || state.turn < p.turn) return // nova partida
+    if (state.over && !p.over && p.seed === state.seed) { const k = overKey(state); withAd(midgame).then(() => setOverAd(k)) } // fim de partida
     if (p.seed === state.seed && !TEST) { // mesma partida (continuar um save troca a seed)
       if (state.turn > p.turn) {
         context({ turn: state.turn, era: state.era })
@@ -288,7 +331,7 @@ export function App() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') { if (mode || link || wreck) sfx('uncard'); setMode(null); setLink(null); setWreck(false); setRailFrom(null); setRailTo(null); setPanel(null) }
-      if (e.key === 'Enter' && screen === 'game' && !fp && !state.over && !state.event && eraUp === null && !aidShown) finishTurn()
+      if (e.key === 'Enter' && screen === 'game' && !fp && !state.over && !state.event && eraUp === null && !aidShown && !adBusy) finishTurn()
       if (e.code === 'KeyP' && screen === 'game' && !MOBILE()) { setFp(v => !v); setMode(null); setLink(null); setPanel(null) }
     }
     window.addEventListener('keydown', onKey)
@@ -337,6 +380,10 @@ export function App() {
   const contract = state.contracts[0] ?? state.offers[0]
   const nextEvent = EVENT_EVERY - (state.turn % EVENT_EVERY)
 
+  // CrazyGames: gameplay só com o tabuleiro livre (sem modal, fim ou anúncio).
+  useEffect(() => gameplay(screen === 'game' && !state.over && eraUp === null && !card && !aidShown && !adBusy),
+    [screen, state.over, eraUp, card, aidShown, adBusy])
+
   // Mão em leque: cada carta gira e desce um pouco conforme a distância do meio.
   const links = (Object.keys(LINKS) as Link[]).filter(l => LINKS[l].era === tab && !LINKS[l].tile) // Ferrovia vira carta de construção
   const builds = (Object.keys(BUILDINGS) as BuildingId[]).filter(id => BUILDINGS[id].era === tab && (id !== 'warcamp' || !!state.match))
@@ -372,11 +419,12 @@ export function App() {
   if (screen !== 'game') {
     const save = loadSave()
     const fresh = !store.get(TUT_DONE)
+    const ads = screen === 'menu' && !setup && adsOn() // banners só no menu principal (nunca na sala online)
     return (
       <>
         {canvas}
         <div className="vignette" />
-        <div className="title">
+        <div className={`title ${ads ? 'ads' : ''}`}>
           <h1>Hexaera</h1>
           <p>{t('Da fogueira à metrópole')}</p>
           {playing !== null && <p className="nowplaying">● {t('{0} jogando agora', playing)}</p>}
@@ -391,8 +439,11 @@ export function App() {
             <button className="opt dark" onClick={() => { sfx('card'); setSetup(SANDBOX_DEFAULT) }}><b>Sandbox</b><span>{t('sem objetivo · você ajusta o mundo')}</span></button>
             <button className="opt dark" onClick={() => { setMuted(!mute); setMute(!mute); if (mute) sfx('click') }}><b><Icons text={t(mute ? '🔇 Som desligado' : '🔊 Som ligado')} /></b></button>
             <LangToggle />
+            {CRAZY && <p className="muted">{t('Usamos métricas anônimas para melhorar o jogo.')}</p>}
           </div>}
         </div>
+        {ads && <AdSlot id="ad-menu-bottom" />}
+        {ads && wide && <AdSlot id="ad-menu-side" />}
       </>
     )
   }
@@ -527,13 +578,19 @@ export function App() {
                 <span><Icons text={`${offer.price} 💰`} /></span>
               </button>
             )}
+            {offer?.kind === 'event' && adsOn() && (
+              <button className="opt dark" disabled={adBusy} onClick={watch(offer)!}>
+                <b><Icons text={t('Pagar metade: {0}', card.options[offer.option!].label)} /></b>
+                <span><Icons text={t('📺 Assistir')} /></span>
+              </button>
+            )}
           </div>
         </div>
       )}
 
-      {aidShown && <AidCard aid={aidShown} state={state} onWatch={null} onSkip={() => { sfx('uncard'); setSkipAid(state.turn) }}
+      {aidShown && <AidCard aid={aidShown} state={state} onWatch={watch(aidShown)} onSkip={() => { sfx('uncard'); setSkipAid(state.turn) }}
         onBuy={() => act(() => takeAid(state, aidShown, 'money'), 'card', ['aid_taken', { kind: aidShown.kind, pay: 'money' }])} />}
-      {eraUp !== null && <EraUp era={eraUp} turn={state.turn} onContinue={() => { sfx('click'); setEraUp(null) }} />}
+      {eraUp !== null && <EraUp era={eraUp} turn={state.turn} onContinue={() => { if (adBusy) return; sfx('click'); withAd(midgame).then(() => setEraUp(null)) }} />}
 
       {/* ---------- direita: minimapa e botões ---------- */}
       <div className="right">
@@ -627,6 +684,7 @@ export function App() {
             <p>{t('Partida online · {0} turnos · Era {1}.', state.turn, ERAS[state.era].name)}</p>
             <button className="opt green" onClick={() => { setPanel(null); leave(); setScreen('menu') }}><b>{t('Menu principal')}</b></button>
           </div>
+          {adsOn() && !adBusy && overAd === overKey(state) && <AdSlot id="ad-over" />}
         </div>
       )}
       {state.over && !match && (
@@ -648,6 +706,7 @@ export function App() {
             )}
             <button className="opt green" onClick={() => play(newGame(), 'replay')}><b>{t('Nova civilização')}</b></button>
           </div>
+          {adsOn() && !adBusy && overAd === overKey(state) && <AdSlot id="ad-over" />}
         </div>
       )}
     </>
