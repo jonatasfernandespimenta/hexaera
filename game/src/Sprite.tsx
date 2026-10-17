@@ -1,6 +1,7 @@
 import { RES, type Res } from './core/data'
 
 // Ícones e artes das folhas em public/ui. Regiões [x, y, w, h, folha] em pixels da folha (folha 0 se omitida).
+// Caminhos relativos (sem '/'): o build do CrazyGames é servido de uma subpasta
 const SHEETS = [
   { url: 'ui/atlas.png', w: 1448, h: 1086 },
   { url: 'ui/atlas2.png', w: 1448, h: 1086 }, // barreiro, olaria, ancião, totem

@@ -7,7 +7,7 @@
     "build": "tsc --noEmit && next build",
     "start": "next start",
     "test": "vitest run",
-    "build:crazy": "NEXT_PUBLIC_CRAZY=1 next build && cd out && zip -qr ../hexaera-crazygames.zip .",
+    "build:crazy": "[ -n \"$NEXT_PUBLIC_API_BASE\" ] || (echo 'defina NEXT_PUBLIC_API_BASE' >&2; exit 1) && NEXT_PUBLIC_CRAZY=1 next build && cd out && rm -f ../hexaera-crazygames.zip && zip -qr ../hexaera-crazygames.zip .",
     "playtest": "vitest run -c vitest.playtest.config.ts"
   },
   "dependencies": {
